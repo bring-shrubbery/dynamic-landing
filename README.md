@@ -1,5 +1,10 @@
 # DynamicLanding
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Docs/Images/hero-dark.png">
+  <img src="Docs/Images/hero-light.png" width="1104" alt="Top of a MacBook-style display: a black DynamicLanding island grows from the notch into a Listening… / Click to stop card, above a teal desktop wallpaper and menu bar.">
+</picture>
+
 **A Dynamic Island for macOS apps, in SwiftUI.**
 
 DynamicLanding puts a small black island at the top of the screen — the way iOS shows a timer, a
@@ -12,16 +17,10 @@ It was built for [JustScribe](https://justscribe.quassum.com), a dictation app, 
 "listening…" while you speak. It suits anything that deserves a glanceable status at the top of
 the screen: timers, recordings, uploads, now playing, a call, a build.
 
-```
-hidden      ▁▁▁▁▁▁▁████▁▁▁▁▁▁▁       the notch (or nothing at all on a screen without one)
-
-compact     ▁▁▁▁[≋] ████ [0:12]▁▁▁   a small view on each side of the notch
-
-expanded    ▁▁▁▁╭──────────────╮▁▁
-                │ ≋ Listening…  │    any SwiftUI view below the notch
-                │ Click to stop │
-                ╰──────────────╯
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Docs/Images/states-dark.png">
+  <img src="Docs/Images/states-light.png" width="1104" alt="Three real island states on a notched screen: hidden leaves only the notch; compact shows a waveform on the left and 0:12 on the right; expanded shows Listening… and Click to stop below the notch.">
+</picture>
 
 - **Three states**: hidden, compact (a leading and a trailing view beside the notch, like iOS Live
   Activities) and expanded (rich content of any size).
@@ -36,6 +35,11 @@ expanded    ▁▁▁▁╭──────────────╮▁▁
 - **Plain by default**: black, no shadow, no bounce. Colours, corner radii, padding, shadow and
   animation are all configurable.
 - **No dependencies.** macOS 14 or later. MIT licence.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Docs/Images/displays-dark.png">
+  <img src="Docs/Images/displays-light.png" width="1104" alt="Notched MacBook and notchless external display compared in compact and expanded states. The same waveform, 0:12 timer and Listening… card grow from the MacBook notch or hang as a rounded pill from the external display's top edge.">
+</picture>
 
 ## Installation
 
@@ -204,6 +208,18 @@ toggles the shadow. Click the island to hide it.
 
 Issues and pull requests are welcome. Run `swift test` before sending a change; a layout change
 should come with a geometry test that pins the new behaviour.
+
+Regenerate the README images on macOS with the package's Swift toolchain:
+
+```sh
+zsh Scripts/generate-readme-images.sh
+```
+
+The script compiles the unchanged library sources alongside a documentation-only renderer,
+giving it internal access without adding a package target or public API. SwiftUI `ImageRenderer`
+renders the real `IslandView` at 2× with synthetic notched and notchless screen metrics; the
+wallpaper and menu bar are procedural. The six light/dark PNGs are saved in `Docs/Images/`, each
+under 1 MB. Review them after regenerating; fonts and symbols can vary between macOS versions.
 
 ## Licence
 
