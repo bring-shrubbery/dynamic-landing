@@ -24,10 +24,34 @@ struct DynamicLandingStateTests {
     @Test func aShowDuringAHideCancelsTheHide() async {
         let i = island()
         await i.show(expanded: { Text("A") })
+        i.configuration.animationDuration = .seconds(1)
         let hiding = Task { await i.hide() }
+        while i.isVisible { await Task.yield() }      // the hide is genuinely in flight
+        i.configuration.animationDuration = .milliseconds(10)
+        let start = ContinuousClock.now
         await i.show(expanded: { Text("B") })
         await hiding.value
         #expect(i.state == .expanded)
+        #expect(ContinuousClock.now - start < .milliseconds(500))   // the show ended the hide's wait
+    }
+
+    @Test func aHideCalledAfterAShowWinsFromShown() async {
+        let i = island()
+        await i.show(expanded: { Text("A") })
+        let a = Task { await i.show(expanded: { Text("B") }) }
+        let b = Task { await i.hide() }
+        await a.value
+        await b.value
+        #expect(i.state == .hidden)
+    }
+
+    @Test func aHideCalledAfterAShowWinsFromHidden() async {
+        let i = island()
+        let a = Task { await i.show(expanded: { Text("B") }) }
+        let b = Task { await i.hide() }
+        await a.value
+        await b.value
+        #expect(i.state == .hidden)
     }
 
     @Test func hidingWhenHiddenIsANoOp() async {
@@ -56,6 +80,7 @@ struct DynamicLandingStateTests {
         let i = island()
         await i.show(expanded: { Text("A") })
         let hiding = Task { await i.hide() }
+        while i.isVisible { await Task.yield() }
         await i.show(expanded: { Text("B") })
         await hiding.value
         #expect(i.model.hasContent && i.state == .expanded)
