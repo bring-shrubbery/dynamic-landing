@@ -55,10 +55,17 @@ public final class DynamicLanding {
     }
 
     public func hide() async {
+        // A hide already in flight: wait for it instead of starting over. A show clears
+        // `hideTask`, so this never waits on a hide that a later show has superseded.
+        if let hideTask {
+            await hideTask.value
+            return
+        }
         guard model.state != .hidden else { return }
         generation += 1
         let mine = generation
-        hideTask?.cancel()
+        // The duration in force when the hide was called, not when its sleep starts.
+        let duration = animationDuration
         // `.keepVisible`: while the pointer is over the island, the hide waits for it to leave.
         let held = model.configuration.hoverBehavior.contains(.keepVisible) && model.isHovering
         if !held { applyHidden() }
@@ -71,11 +78,12 @@ public final class DynamicLanding {
                 guard generation == mine else { return }
                 applyHidden()
             }
-            try? await Task.sleep(for: animationDuration)
+            try? await Task.sleep(for: duration)
             // A later call owns the island now; leave its panel and content alone.
             guard generation == mine, model.state == .hidden else { return }
             controller?.dismiss()
             model.clearContent()
+            hideTask = nil
         }
         hideTask = task
         await task.value
