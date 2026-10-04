@@ -15,7 +15,12 @@ public final class IslandModel {
     var trailingSize: CGSize = .zero
     var contentSize: CGSize = .zero
     var isHovering = false
-    /// Bumped on every content change so a same-state replacement still fades.
+    /// Whether any content has been set since the last `clearContent()`.
+    private(set) var hasContent = false
+    /// The content's identity. Bumped only when the state changes, so the change fades
+    /// (with the state's own animation); content replaced within the same state is an
+    /// in-place update that keeps its identity and `@State`, so live content (a ticking
+    /// timer re-shown every second) never crossfades.
     var contentGeneration = 0
     public var onTap: (() -> Void)?
 
@@ -29,13 +34,28 @@ public final class IslandModel {
                               compactSlotSizes: (leadingSize, trailingSize), expandedContentSize: contentSize)
     }
 
-    public func setState(_ new: IslandState) { state = new }
+    public func setState(_ new: IslandState) {
+        guard new != state else { return }
+        state = new
+        contentGeneration += 1
+    }
 
     func setCompact(leading: AnyView, trailing: AnyView) {
-        compactLeading = leading; compactTrailing = trailing; contentGeneration += 1
+        compactLeading = leading; compactTrailing = trailing; hasContent = true
     }
 
     func setExpanded(_ content: AnyView) {
-        expandedContent = content; contentGeneration += 1
+        expandedContent = content; hasContent = true
+    }
+
+    /// Drops the content and its measured sizes. The controller calls this once a hide has
+    /// finished animating (the model cannot wait for the animation itself), so the content
+    /// stays on screen while the island shrinks away.
+    func clearContent() {
+        compactLeading = AnyView(EmptyView())
+        compactTrailing = AnyView(EmptyView())
+        expandedContent = AnyView(EmptyView())
+        leadingSize = .zero; trailingSize = .zero; contentSize = .zero
+        hasContent = false
     }
 }
