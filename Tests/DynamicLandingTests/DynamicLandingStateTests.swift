@@ -157,6 +157,20 @@ struct DynamicLandingStateTests {
         #expect(ContinuousClock.now - start < .milliseconds(500))
     }
 
+    @Test func aHideOverriddenBySetStateDoesNotBlockTheNextHide() async {
+        let i = island()
+        i.configuration.animationDuration = .milliseconds(200)
+        await i.show(expanded: { Text("A") })
+        let hiding = Task { await i.hide() }
+        while i.isVisible { await Task.yield() }
+        i.model.setState(.compact)          // a consumer takes over during the hide's sleep
+        await hiding.value
+        #expect(i.state == .compact)
+        i.configuration.animationDuration = .milliseconds(10)
+        await i.hide()
+        #expect(i.state == .hidden)
+    }
+
     @Test func mousePassThroughFollowsThePointer() {
         let rect = CGRect(x: 600, y: 900, width: 300, height: 80)
         #expect(MousePassThrough.shouldIgnoreMouse(pointer: CGPoint(x: 100, y: 100), islandRect: rect))

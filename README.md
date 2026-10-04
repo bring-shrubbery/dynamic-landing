@@ -17,7 +17,8 @@ island.onTap = { … }
 ```
 
 `show` and `hide` return once their animation has run. The call made last wins: a show cancels a
-pending hide, and a second `hide()` waits for the one already running. Re-showing the same state
+pending hide, and a second `hide()` waits for the one already running. With `.keepVisible`, a hide first waits
+(up to 10 s) while the pointer is over the island. Re-showing the same state
 with new content (a ticking timer, say) updates it in place, without a crossfade. The island's
 panel never takes focus and lets clicks through everywhere outside the island.
 

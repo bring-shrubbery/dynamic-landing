@@ -70,6 +70,8 @@ public final class DynamicLanding {
         let held = model.configuration.hoverBehavior.contains(.keepVisible) && model.isHovering
         if !held { applyHidden() }
         let task = Task { @MainActor in
+            // However this task ends, it is no longer a hide in flight for later calls to wait on.
+            defer { if generation == mine { hideTask = nil } }
             if held {
                 var waited = 0   // at most 10 s
                 while model.isHovering, waited < 100, generation == mine, !Task.isCancelled {
@@ -83,7 +85,6 @@ public final class DynamicLanding {
             guard generation == mine, model.state == .hidden else { return }
             controller?.dismiss()
             model.clearContent()
-            hideTask = nil
         }
         hideTask = task
         await task.value

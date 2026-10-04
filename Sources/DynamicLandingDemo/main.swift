@@ -26,15 +26,24 @@ final class DemoApp: NSObject, NSApplicationDelegate {
         menu.addItem(withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         for item in menu.items { item.target = self }
         statusItem.menu = menu
-        island.onTap = { [weak self] in Task { await self?.island.hide() } }
+        // Through `hide()`, so the compact timer stops too and cannot bring the island back.
+        island.onTap = { [weak self] in self?.hide() }
     }
 
     @objc func compact() {
         seconds = 0
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.seconds += 1; self?.showCompact() }
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                // A tick queued before Hide or Expanded must not bring compact back.
+                guard let self, self.timer?.isValid == true else { return }
+                self.seconds += 1
+                self.showCompact()
+            }
         }
+        // `.common` so it keeps ticking while the menu is open.
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
         showCompact()
     }
 
