@@ -42,16 +42,19 @@ struct IslandView: View {
                 model.compactLeading
                     .fixedSize().readSize { model.leadingSize = $0 }
                     .frame(width: l.width, height: l.height, alignment: .center)
+                    .clipped()
                     .offset(x: l.minX, y: l.minY)
                 model.compactTrailing
                     .fixedSize().readSize { model.trailingSize = $0 }
                     .frame(width: t.width, height: t.height, alignment: .center)
+                    .clipped()
                     .offset(x: t.minX, y: t.minY)
             }
             if model.state == .expanded, let c = layout.contentRect {
                 model.expandedContent
                     .fixedSize().readSize { model.contentSize = $0 }
                     .frame(width: c.width, height: c.height, alignment: .topLeading)
+                    .clipped()
                     .offset(x: c.minX, y: c.minY)
             }
         }
