@@ -29,4 +29,32 @@ struct ScreenMetricsTests {
         #expect(c.animationDuration == .milliseconds(350) && c.slotPadding == 8 && c.virtualNotchWidth == 180)
         #expect(c.contentPadding.top == 10 && c.contentPadding.leading == 16 && c.contentPadding.bottom == 12 && c.contentPadding.trailing == 16)
     }
+
+    @Test func configurationTakesAStyle() {
+        #expect(IslandConfiguration(style: .pill(cornerRadius: 9)).style == .pill(cornerRadius: 9))
+        #expect(IslandConfiguration().style == .automatic)
+    }
+
+    @Test func notchSizeIsTheGapBetweenTheAuxiliaryAreas() {
+        #expect(ScreenMetrics.notchSize(frameWidth: 1512, leftAuxiliaryWidth: 656, rightAuxiliaryWidth: 656, topInset: 38) == CGSize(width: 200, height: 38))
+    }
+
+    @Test func notchSizeNeedsBothAuxiliaryAreas() {
+        #expect(ScreenMetrics.notchSize(frameWidth: 1512, leftAuxiliaryWidth: nil, rightAuxiliaryWidth: nil, topInset: 38) == nil)
+        #expect(ScreenMetrics.notchSize(frameWidth: 1512, leftAuxiliaryWidth: 656, rightAuxiliaryWidth: nil, topInset: 38) == nil)
+    }
+
+    @Test func notchSizeNeedsATopInset() {
+        #expect(ScreenMetrics.notchSize(frameWidth: 1512, leftAuxiliaryWidth: 656, rightAuxiliaryWidth: 656, topInset: 0) == nil)
+    }
+
+    @Test func notchSizeNeedsAPositiveGap() {
+        #expect(ScreenMetrics.notchSize(frameWidth: 1512, leftAuxiliaryWidth: 756, rightAuxiliaryWidth: 756, topInset: 38) == nil)
+    }
+
+    @Test func menuBarHeightIsTheScreensOwn() {
+        #expect(ScreenMetrics.menuBarHeight(topInset: 38, frameMaxY: 982, visibleFrameMaxY: 944, fallback: 24) == 38)
+        #expect(ScreenMetrics.menuBarHeight(topInset: 0, frameMaxY: 1640, visibleFrameMaxY: 1615, fallback: 24) == 25)
+        #expect(ScreenMetrics.menuBarHeight(topInset: 0, frameMaxY: 1440, visibleFrameMaxY: 1440, fallback: 24) == 24)
+    }
 }

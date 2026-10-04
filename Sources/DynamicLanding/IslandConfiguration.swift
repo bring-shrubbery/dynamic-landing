@@ -24,7 +24,9 @@ public struct IslandConfiguration: Sendable {
     /// How long `show`/`hide` wait for `animation` to finish (SwiftUI exposes no duration).
     public var animationDuration: Duration = .milliseconds(350)
 
-    public init() {}
+    public init(style: IslandStyle = .automatic) {
+        self.style = style
+    }
 }
 
 public enum IslandStyle: Equatable, Sendable {
