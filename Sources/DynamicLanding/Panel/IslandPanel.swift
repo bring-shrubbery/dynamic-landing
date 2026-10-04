@@ -20,6 +20,12 @@ final class IslandPanel: NSPanel {
         acceptsMouseMovedEvents = true
     }
 
+    /// AppKit keeps ordinary windows below the menu bar by moving them down; the island is
+    /// pinned to the screen's top edge on purpose (over the menu bar on a notchless display).
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        frameRect
+    }
+
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
 }
