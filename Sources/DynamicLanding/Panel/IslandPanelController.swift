@@ -17,6 +17,9 @@ final class IslandPanelController {
     private var screenObserver: NSObjectProtocol?
     private var pollTask: Task<Void, Never>?
     private var isPresented = false
+    /// Bumped on every present and dismiss; a layout-observation chain re-arms only while
+    /// the epoch it started in is current, so a dismiss→present cycle never leaves two.
+    private var epoch = 0
     private(set) var screen: NSScreen?
 
     init(model: IslandModel) {
@@ -25,6 +28,7 @@ final class IslandPanelController {
 
     func present(on screen: NSScreen) {
         self.screen = screen
+        epoch += 1
         let target = Self.panelFrame(for: screen)
         if let panel {
             // The target screen may have changed since the last show.
@@ -43,14 +47,16 @@ final class IslandPanelController {
             isPresented = true
             installMouseMonitors()
             startPolling()
-            observeLayout()
             observeScreenChanges()
         }
+        // The old chain (if any) is stale now; this one replaces it.
+        observeLayout()
         panel?.orderFrontRegardless()
     }
 
     /// Hides the panel and stops watching the mouse and the screen until the next `present`.
     func dismiss() {
+        epoch += 1
         panel?.orderOut(nil)
         isPresented = false
         for monitor in mouseMonitors { NSEvent.removeMonitor(monitor) }
@@ -70,6 +76,10 @@ final class IslandPanelController {
             && !MousePassThrough.shouldIgnoreMouse(pointer: NSEvent.mouseLocation, islandRect: model.layout.rect)
         if panel.ignoresMouseEvents == inside { panel.ignoresMouseEvents = !inside }
         if model.isHovering != inside { model.isHovering = inside }
+    }
+
+    private static func displayNumber(of screen: NSScreen) -> NSNumber? {
+        screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
     }
 
     private static func panelFrame(for screen: NSScreen) -> NSRect {
@@ -103,12 +113,14 @@ final class IslandPanelController {
     /// Re-armed after each change while presented (observation tracking fires once).
     private func observeLayout() {
         guard isPresented else { return }
+        let token = epoch
         withObservationTracking {
             _ = model.layout
         } onChange: { [weak self] in
             Task { @MainActor in
-                self?.refreshMousePassThrough()
-                self?.observeLayout()
+                guard let self, self.epoch == token else { return }
+                self.refreshMousePassThrough()
+                self.observeLayout()
             }
         }
     }
@@ -124,7 +136,10 @@ final class IslandPanelController {
 
     private func screenParametersChanged() {
         guard isPresented else { return }
-        let current = screen.flatMap { s in NSScreen.screens.first { $0 == s } } ?? NSScreen.main
+        // NSScreen objects are recreated on a reconfiguration; the display number is stable.
+        let current = screen.flatMap(Self.displayNumber).flatMap { number in
+            NSScreen.screens.first { Self.displayNumber(of: $0) == number }
+        } ?? NSScreen.main
         guard let current else { return }
         screen = current
         model.metrics = ScreenMetrics(screen: current)
