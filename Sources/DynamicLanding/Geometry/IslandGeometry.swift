@@ -66,9 +66,11 @@ public enum IslandGeometry {
             }
         case .compact:
             if let n = notch {
-                // Both sides are as wide as the wider slot, so the island stays centred on the
-                // notch. A pill around a real notch has the same sides, without the flares.
-                let side = max(slotWidths.leading, slotWidths.trailing) + padding
+                // Both sides are as wide as the wider slot plus padding next to the notch and at
+                // the outer edge, so the island stays centred on the notch and the wider slot
+                // clears the bottom corner. A pill around a real notch has the same sides,
+                // without the flares.
+                let side = max(slotWidths.leading, slotWidths.trailing) + 2 * padding
                 width = n.width + 2 * (radii.top + side)
                 height = n.height
             } else {
@@ -100,11 +102,12 @@ public enum IslandGeometry {
         case .compact:
             if let n = notch {
                 // Each slot hugs its side of the notch and shrinks to the room left on that side
-                // (inside the flares), never into the notch and never past the island's edge.
+                // (inside the flares and the outer padding), never into the notch and never past
+                // the island's edge.
                 let notchMinX = max(0, (width - n.width) / 2), notchMaxX = min(width, notchMinX + n.width)
-                let lw = max(0, min(slotWidths.leading, notchMinX - padding - radii.top))
+                let lw = max(0, min(slotWidths.leading, notchMinX - 2 * padding - radii.top))
                 let trailingX = notchMaxX + padding
-                let tw = max(0, min(slotWidths.trailing, width - radii.top - trailingX))
+                let tw = max(0, min(slotWidths.trailing, width - radii.top - padding - trailingX))
                 leading = CGRect(x: notchMinX - padding - lw, y: 0, width: lw, height: height)
                 trailing = CGRect(x: trailingX, y: 0, width: tw, height: height)
             } else {

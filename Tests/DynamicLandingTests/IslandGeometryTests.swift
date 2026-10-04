@@ -52,7 +52,9 @@ struct IslandGeometryTests {
         #expect(leading.maxX == notchMinX - 8 && trailing.minX == notchMaxX + 8)
         #expect(leading.width == slots.leading.width && trailing.width == slots.trailing.width)
         #expect(l.rect.height == 38)
-        #expect(l.rect.width == CGFloat(200 + 2 * (15 + 40 + 8)))   // the wider slot sets both sides
+        #expect(l.rect.width == CGFloat(200 + 2 * (15 + 40 + 16)))   // the wider slot sets both sides
+        // Padding at the outer edge too, inside the flares, so the bottom corner never clips a slot.
+        #expect(trailing.maxX <= l.rect.width - 15 - 8 && leading.minX >= 15 + 8)
     }
 
     @Test func compactOnAPillIsTwoSlotsWithAGap() throws {
@@ -133,7 +135,8 @@ struct IslandGeometryTests {
         let band = notchBand(l, 200)
         #expect(leading.maxX == band.lowerBound - 8 && trailing.minX == band.upperBound + 8)
         #expect(leading.width == slots.leading.width && trailing.width == slots.trailing.width)
-        #expect(l.rect.width == CGFloat(200 + 2 * (40 + 8)))   // no flares
+        #expect(l.rect.width == CGFloat(200 + 2 * (40 + 16)))   // no flares; padding on both sides of each slot
+        #expect(trailing.maxX <= l.rect.width - 8 && leading.minX >= 8)
     }
 
     @Test func aForcedPillOnANotchedScreenExpandsBelowTheNotch() throws {

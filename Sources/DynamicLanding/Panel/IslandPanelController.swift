@@ -40,8 +40,16 @@ final class IslandPanelController {
             hosting.safeAreaRegions = []
             hosting.frame = NSRect(origin: .zero, size: target.size)
             hosting.autoresizingMask = [.width, .height]
+            // The panel is sized by `panelFrame`, never by the island's content: without this the
+            // hosting view rewrites the window's min/max sizes on every layout change.
+            hosting.sizingOptions = []
             panel.contentView = hosting
             self.panel = panel
+            // Lay out the hidden island and put the panel on screen now, before the caller sets
+            // the new state inside `withAnimation`, so the very first grow animates from the
+            // hidden layout instead of appearing at full size.
+            hosting.layoutSubtreeIfNeeded()
+            panel.orderFrontRegardless()
         }
         if !isPresented {
             isPresented = true
@@ -104,7 +112,9 @@ final class IslandPanelController {
         pollTask?.cancel()
         pollTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
-                self?.refreshMousePassThrough()
+                // A freed controller ends the loop rather than polling forever.
+                guard let self else { return }
+                self.refreshMousePassThrough()
                 try? await Task.sleep(for: .milliseconds(100))
             }
         }
