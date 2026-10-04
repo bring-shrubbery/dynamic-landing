@@ -16,6 +16,11 @@ await island.hide()
 island.onTap = { … }
 ```
 
+`show` and `hide` return once their animation has run. The call made last wins: a show cancels a
+pending hide, and a second `hide()` waits for the one already running. Re-showing the same state
+with new content (a ticking timer, say) updates it in place, without a crossfade. The island's
+panel never takes focus and lets clicks through everywhere outside the island.
+
 macOS 14+, no dependencies, MIT. Used by [JustScribe](https://justscribe.quassum.com).
 
 `swift run DynamicLandingDemo` shows a menu-bar demo with every state and style.
