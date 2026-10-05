@@ -48,17 +48,27 @@ public enum IslandGeometry {
             ? CGSize(width: configuration.virtualNotchWidth, height: configuration.compactHeight) : nil)
         let p = configuration.contentPadding
         let slotWidths = (leading: compactSlotSizes.leading.width, trailing: compactSlotSizes.trailing.width)
+        let compactHeight = notch?.height ?? configuration.compactHeight
 
-        // First the island's natural size, then the clamp, then what goes inside it, so that
-        // slots and content are always placed in the island that is actually shown.
+        // The expanded size does not depend on the state: content that is not showing is still
+        // laid out at the place it has when it shows, so the view can fade it there (IslandView).
+        let contentTop: CGFloat = if look == .notch, let n = notch {
+            n.height + p.top
+        } else {
+            metrics.notchSize.map { $0.height + p.top } ?? configuration.expandedTopInset
+        }
+        let expandedWidth: CGFloat = if look == .notch, let n = notch {
+            min(max(n.width, expandedContentSize.width + p.leading + p.trailing) + 2 * radii.top, frame.width / 2)
+        } else {
+            min(max(expandedContentSize.width + p.leading + p.trailing, metrics.notchSize?.width ?? 0), frame.width / 2)
+        }
+        let expandedHeight = min(contentTop + expandedContentSize.height + p.bottom, frame.height / 2)
+
         var width: CGFloat
         var height: CGFloat
-        var contentTop: CGFloat = 0
 
         switch state {
         case .hidden:
-            // The notch itself on a notched screen; nothing at all on a notchless one, whatever
-            // the style, so a forced notch never leaves a permanent tab on an external display.
             if look == .notch, let n = metrics.notchSize {
                 width = n.width; height = n.height
             } else {
@@ -66,67 +76,46 @@ public enum IslandGeometry {
             }
         case .compact:
             if let n = notch {
-                // Both sides are as wide as the wider slot plus padding next to the notch and at
-                // the outer edge, so the island stays centred on the notch and the wider slot
-                // clears the bottom corner. A pill around a real notch has the same sides,
-                // without the flares.
                 let side = max(slotWidths.leading, slotWidths.trailing) + 2 * padding
-                width = n.width + 2 * (radii.top + side)
-                height = n.height
+                width = min(n.width + 2 * (radii.top + side), frame.width / 2)
             } else {
-                width = slotWidths.leading + slotWidths.trailing + 3 * padding
-                height = configuration.compactHeight
+                width = min(slotWidths.leading + slotWidths.trailing + 3 * padding, frame.width / 2)
             }
+            height = compactHeight
         case .expanded:
-            if look == .notch, let n = notch {
-                width = max(n.width, expandedContentSize.width + p.leading + p.trailing) + 2 * radii.top
-                contentTop = n.height + p.top
-            } else {
-                width = max(expandedContentSize.width + p.leading + p.trailing, metrics.notchSize?.width ?? 0)
-                contentTop = metrics.notchSize.map { $0.height + p.top } ?? configuration.expandedTopInset
-            }
-            height = contentTop + expandedContentSize.height + p.bottom
+            width = expandedWidth
+            height = expandedHeight
         }
 
-        // Never more than half the screen.
-        width = min(width, frame.width / 2)
-        height = min(height, frame.height / 2)
-
-        var leading: CGRect?
-        var trailing: CGRect?
-        var content: CGRect?
-
-        switch state {
-        case .hidden:
-            break
-        case .compact:
-            if let n = notch {
-                // Each slot hugs its side of the notch and shrinks to the room left on that side
-                // (inside the flares and the outer padding), never into the notch and never past
-                // the island's edge.
-                let notchMinX = max(0, (width - n.width) / 2), notchMaxX = min(width, notchMinX + n.width)
-                let lw = max(0, min(slotWidths.leading, notchMinX - 2 * padding - radii.top))
-                let trailingX = notchMaxX + padding
-                let tw = max(0, min(slotWidths.trailing, width - radii.top - padding - trailingX))
-                leading = CGRect(x: notchMinX - padding - lw, y: 0, width: lw, height: height)
-                trailing = CGRect(x: trailingX, y: 0, width: tw, height: height)
-            } else {
-                // A pill: slots at the two ends with a gap between; if they don't fit, the
-                // trailing slot keeps up to half the room and the leading slot gets the rest.
-                let room = max(0, width - 3 * padding)
-                let tw = min(slotWidths.trailing, max(room / 2, room - slotWidths.leading))
-                let lw = min(slotWidths.leading, room - tw)
-                leading = CGRect(x: padding, y: 0, width: lw, height: height)
-                trailing = CGRect(x: width - padding - tw, y: 0, width: tw, height: height)
-            }
-        case .expanded:
-            // The content clips to the visible body: inside the flares and the padding.
-            let flares = look == .notch ? 2 * radii.top : 0
-            let maxWidth = max(0, width - flares - p.leading - p.trailing)
-            let w = max(0, min(expandedContentSize.width, maxWidth))
-            let h = max(0, min(expandedContentSize.height, height - contentTop))
-            content = CGRect(x: (width - w) / 2, y: min(contentTop, height), width: w, height: h)
+        // The compact slots, beside the notch (or at the pill's ends) at the island's current
+        // width; they are as tall as the compact island in every state, so a slot fading out of
+        // a tall expanded island does not drift down.
+        var leading: CGRect
+        var trailing: CGRect
+        if let n = notch {
+            let notchMinX = max(0, (width - n.width) / 2), notchMaxX = min(width, notchMinX + n.width)
+            let lw = max(0, min(slotWidths.leading, notchMinX - 2 * padding - radii.top))
+            let trailingX = notchMaxX + padding
+            let tw = max(0, min(slotWidths.trailing, width - radii.top - padding - trailingX))
+            leading = CGRect(x: notchMinX - padding - lw, y: 0, width: lw, height: compactHeight)
+            trailing = CGRect(x: trailingX, y: 0, width: tw, height: compactHeight)
+        } else {
+            let room = max(0, width - 3 * padding)
+            let tw = min(slotWidths.trailing, max(room / 2, room - slotWidths.leading))
+            let lw = min(slotWidths.leading, room - tw)
+            leading = CGRect(x: padding, y: 0, width: lw, height: compactHeight)
+            trailing = CGRect(x: width - padding - tw, y: 0, width: tw, height: compactHeight)
         }
+        // A collapsed slot in a hidden island stays within the island.
+        leading.origin.x = min(max(leading.minX, 0), max(0, width - leading.width))
+        trailing.origin.x = min(max(trailing.minX, 0), max(0, width - trailing.width))
+
+        // The expanded content, centred in the island's current width at its expanded place.
+        let flares = look == .notch ? 2 * radii.top : 0
+        let maxWidth = max(0, expandedWidth - flares - p.leading - p.trailing)
+        let w = max(0, min(expandedContentSize.width, maxWidth))
+        let h = max(0, min(expandedContentSize.height, expandedHeight - contentTop))
+        let content = CGRect(x: (width - w) / 2, y: min(contentTop, expandedHeight), width: w, height: h)
 
         let rect = CGRect(x: frame.midX - width / 2, y: frame.maxY - height, width: width, height: height)
         return IslandLayout(rect: rect, topCornerRadius: radii.top, bottomCornerRadius: radii.bottom,

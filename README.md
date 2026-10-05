@@ -53,7 +53,7 @@ Or in `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/bring-shrubbery/dynamic-landing", from: "0.1.3"),
+    .package(url: "https://github.com/bring-shrubbery/dynamic-landing", from: "0.1.4"),
 ],
 targets: [
     .target(name: "MyApp", dependencies: [.product(name: "DynamicLanding", package: "dynamic-landing")]),
@@ -61,7 +61,7 @@ targets: [
 ```
 
 DynamicLanding is pre-1.0: minor versions (0.2, 0.3…) may change the API. Use
-`.upToNextMinor(from: "0.1.3")` to opt in to those explicitly.
+`.upToNextMinor(from: "0.1.4")` to opt in to those explicitly.
 
 ## Quick start
 

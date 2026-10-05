@@ -92,6 +92,32 @@ struct IslandGeometryTests {
         #expect(l.topCornerRadius == 12 && l.bottomCornerRadius == 18)
     }
 
+    @Test func everyStatePlacesEveryPieceWhereItShowsSoTheViewCanFadeItInPlace() throws {
+        for metrics in [notched, notchless] {
+            for style in styles {
+                let shown = layout(.expanded, metrics, style)
+                let expandedContent = try #require(shown.contentRect)
+                let compact = layout(.compact, metrics, style)
+                let compactHeight = compact.rect.height
+                for state in states {
+                    let l = layout(state, metrics, style)
+                    let content = try #require(l.contentRect)
+                    // The card keeps its size and its top edge and is centred in whatever width
+                    // the island has, so the island's growth reveals it where it ends up.
+                    #expect(content.size == expandedContent.size, "\(state) \(style)")
+                    #expect(content.minY == expandedContent.minY, "\(state) \(style)")
+                    #expect(abs(content.midX - l.rect.width / 2) < 0.5, "\(state) \(style)")
+                    // The slots are as tall as the compact island in every state and never
+                    // leave the island.
+                    for slot in [try #require(l.leadingSlot), try #require(l.trailingSlot)] {
+                        #expect(slot.height == compactHeight, "\(state) \(style)")
+                        #expect(slot.minX >= 0 && slot.maxX <= l.rect.width + 0.01, "\(state) \(style) \(slot)")
+                    }
+                }
+            }
+        }
+    }
+
     @Test func hiddenOnANotchlessScreenIsZeroHeightWhateverTheStyle() {
         for style in styles {
             let l = layout(.hidden, notchless, style)

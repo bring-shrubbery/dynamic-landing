@@ -38,31 +38,35 @@ struct IslandView: View {
 
     /// The visible content, each piece laid out at its natural size and measured where it
     /// stands; the geometry then sizes the island (and the slot frames) from those sizes.
+    /// Every piece stays in the tree in every state and fades in or out where it belongs. A view
+    /// removed with a transition is drawn outside its parent's clip for a frame on its way out,
+    /// which showed the content beside a closing island.
     @ViewBuilder
     private func content(layout: IslandLayout) -> some View {
         ZStack(alignment: .topLeading) {
-            if model.state == .compact, let l = layout.leadingSlot, let t = layout.trailingSlot {
+            if let l = layout.leadingSlot, let t = layout.trailingSlot {
                 model.compactLeading
                     .fixedSize().readSize { model.leadingSize = $0 }
                     .frame(width: l.width, height: l.height, alignment: .center)
                     .clipped()
                     .offset(x: l.minX, y: l.minY)
+                    .opacity(model.state == .compact ? 1 : 0)
                 model.compactTrailing
                     .fixedSize().readSize { model.trailingSize = $0 }
                     .frame(width: t.width, height: t.height, alignment: .center)
                     .clipped()
                     .offset(x: t.minX, y: t.minY)
+                    .opacity(model.state == .compact ? 1 : 0)
             }
-            if model.state == .expanded, let c = layout.contentRect {
+            if let c = layout.contentRect {
                 model.expandedContent
                     .fixedSize().readSize { model.contentSize = $0 }
                     .frame(width: c.width, height: c.height, alignment: .topLeading)
                     .clipped()
                     .offset(x: c.minX, y: c.minY)
+                    .opacity(model.state == .expanded ? 1 : 0)
             }
         }
-        .id(model.contentGeneration)
-        .transition(.opacity)
     }
 
     private func backgroundStyle(_ background: IslandBackground) -> AnyShapeStyle {
