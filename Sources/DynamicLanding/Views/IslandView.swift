@@ -18,9 +18,12 @@ struct IslandView: View {
                 .islandShadow(config.shadow)
                 .frame(width: layout.rect.width, height: layout.rect.height, alignment: .top)
 
+            // Clipped to the island's own shape, not its bounding rectangle: while the island
+            // grows, new content is laid out for its final size at once, and the parts that fall
+            // in the flares or the rounded corners would otherwise show outside the black.
             content(layout: layout)
                 .frame(width: layout.rect.width, height: layout.rect.height, alignment: .topLeading)
-                .clipped()
+                .clipShape(shape)
         }
         // The whole island is the tap target: buttons in the content take precedence, a tap
         // anywhere else inside the shape fires `onTap`, and outside the shape nothing is hit.

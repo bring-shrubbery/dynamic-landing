@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3
+
+- Content is clipped to the island's shape, not its bounding rectangle. While the island grew,
+  content in the notch flares or the pill's rounded corners showed outside the black.
+
 ## 0.1.2
 
 - On a display without a notch the island hangs from the very top of the screen. macOS was
