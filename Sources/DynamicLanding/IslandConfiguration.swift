@@ -23,10 +23,23 @@ public struct IslandConfiguration: Sendable {
     public var virtualNotchWidth: CGFloat = 180
     /// How long `show`/`hide` wait for `animation` to finish (SwiftUI exposes no duration).
     public var animationDuration: Duration = .milliseconds(350)
+    /// Whether this island shares the notch with islands in other apps (and other islands in
+    /// this app), hiding for one that outranks it and coming back when it is done.
+    public var coordination: IslandCoordination = .shared
+    /// How this island ranks against others wanting the same notch; see `IslandPriority`.
+    public var priority: IslandPriority = .normal
 
     public init(style: IslandStyle = .automatic) {
         self.style = style
     }
+}
+
+/// Whether an island takes part in the agreement between islands; see `Docs/Coordination.md`.
+public enum IslandCoordination: Equatable, Sendable {
+    /// Take part: one island at a time per display, the most important first.
+    case shared
+    /// Ignore every other island and show regardless.
+    case none
 }
 
 public enum IslandStyle: Equatable, Sendable {

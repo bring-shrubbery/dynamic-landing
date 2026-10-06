@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.2.0
+
+Islands share the notch. Every `DynamicLanding` on the machine, in any app, now takes part in
+one agreement: one island per display at a time, the most important first, and an island that
+stepped aside shows itself again when the notch is free. Nothing to set up; existing code
+behaves the same until a second island appears. [Docs/Coordination.md](Docs/Coordination.md)
+has the agreement and the message format.
+
+- `IslandConfiguration.priority` (`IslandPriority`: `.background`, `.normal`, `.high`,
+  `.urgent` or any integer) ranks the island. A higher priority wins the notch; between equals
+  the island shown last wins.
+- `IslandConfiguration.coordination` (`.shared`, the default, or `.none` to opt out).
+- `DynamicLanding.isYielded`, `onYield` and `onResume` report losing and regaining the notch.
+  A yielded island keeps its content; `show` while yielded updates it; `hide` drops it.
+- `IslandMessage` is the public wire format, carried as JSON in a distributed notification
+  named `com.quassum.dynamic-landing.island`.
+- The demo's "Interrupt with an urgent island" (⌘3) shows the hand-off in one process.
+
+Minor version bump: the API grows (nothing existing changed), and the default behaviour changes
+when more than one island exists.
+
 ## 0.1.4
 
 - No content shows outside a closing island. On a state change the old content was removed

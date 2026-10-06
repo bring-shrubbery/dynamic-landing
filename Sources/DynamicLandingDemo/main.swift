@@ -7,6 +7,12 @@ import SwiftUI
 final class DemoApp: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var island = DynamicLanding()
+    /// A second island in the same process, ranked urgent: what another app's prompt is.
+    private var interrupter: DynamicLanding = {
+        var config = IslandConfiguration()
+        config.priority = .urgent
+        return DynamicLanding(configuration: config)
+    }()
     private var seconds = 0
     private var timer: Timer?
 
@@ -17,6 +23,7 @@ final class DemoApp: NSObject, NSApplicationDelegate {
         menu.addItem(withTitle: "Compact (waveform · timer)", action: #selector(compact), keyEquivalent: "1")
         menu.addItem(withTitle: "Expanded (card)", action: #selector(expanded), keyEquivalent: "2")
         menu.addItem(withTitle: "Hide", action: #selector(hide), keyEquivalent: "0")
+        menu.addItem(withTitle: "Interrupt with an urgent island", action: #selector(interrupt), keyEquivalent: "3")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Style: automatic", action: #selector(styleAuto), keyEquivalent: "")
         menu.addItem(withTitle: "Style: notch", action: #selector(styleNotch), keyEquivalent: "")
@@ -28,6 +35,26 @@ final class DemoApp: NSObject, NSApplicationDelegate {
         statusItem.menu = menu
         // Through `hide()`, so the compact timer stops too and cannot bring the island back.
         island.onTap = { [weak self] in self?.hide() }
+        // What an app does when another island takes the notch: pause, and resume after.
+        island.onYield = { NSLog("DynamicLandingDemo: yielded the notch") }
+        island.onResume = { NSLog("DynamicLandingDemo: back in the notch") }
+    }
+
+    /// An urgent island for three seconds. The timer's island yields and comes back after.
+    @objc func interrupt() {
+        Task {
+            await interrupter.show(expanded: {
+                HStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.bubble.fill").font(.system(size: 28))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Another app needs the notch").font(.headline)
+                        Text("Urgent priority · gone in 3 s").font(.caption).opacity(0.7)
+                    }
+                }
+            })
+            try? await Task.sleep(for: .seconds(3))
+            await interrupter.hide()
+        }
     }
 
     @objc func compact() {

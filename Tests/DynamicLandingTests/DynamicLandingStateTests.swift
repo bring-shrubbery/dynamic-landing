@@ -7,7 +7,7 @@ struct DynamicLandingStateTests {
     private func island() -> DynamicLanding {
         let metrics = ScreenMetrics(frame: CGRect(x: 0, y: 0, width: 1512, height: 982), notchSize: CGSize(width: 200, height: 38), menuBarHeight: 38)
         var c = IslandConfiguration(); c.animation = .linear(duration: 0.01); c.animationDuration = .milliseconds(10)
-        return DynamicLanding(configuration: c, metrics: metrics, presentsPanel: false)
+        return DynamicLanding(configuration: c, metrics: metrics, presentsPanel: false, bus: LocalIslandBus())
     }
 
     @Test func showingCompactThenExpandedMorphsInPlace() async {

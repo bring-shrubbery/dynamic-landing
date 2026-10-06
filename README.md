@@ -32,6 +32,8 @@ the screen: timers, recordings, uploads, now playing, a call, a build.
   state (a ticking clock) changes it without a flicker.
 - **Stays out of the way**: never takes keyboard focus, never steals clicks outside the island,
   appears on every Space and above full-screen apps.
+- **Shares the notch**: when another app's island shows, the one that matters less hides and
+  comes back by itself afterwards. Priorities decide; no setup, no helper process.
 - **Plain by default**: black, no shadow, no bounce. Colours, corner radii, padding, shadow and
   animation are all configurable.
 - **No dependencies.** macOS 14 or later. MIT licence.
@@ -53,7 +55,7 @@ Or in `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/bring-shrubbery/dynamic-landing", from: "0.1.4"),
+    .package(url: "https://github.com/bring-shrubbery/dynamic-landing", from: "0.2.0"),
 ],
 targets: [
     .target(name: "MyApp", dependencies: [.product(name: "DynamicLanding", package: "dynamic-landing")]),
@@ -61,7 +63,7 @@ targets: [
 ```
 
 DynamicLanding is pre-1.0: minor versions (0.2, 0.3…) may change the API. Use
-`.upToNextMinor(from: "0.1.4")` to opt in to those explicitly.
+`.upToNextMinor(from: "0.2.0")` to opt in to those explicitly.
 
 ## Quick start
 
@@ -119,6 +121,29 @@ island.onTap = { [weak self] in self?.stopRecording() }
 `onTap` fires for a click anywhere on the island. Buttons inside your content work as usual and
 take precedence. Clicks outside the island go to whatever is underneath, including the menu bar.
 
+## Sharing the notch with other apps
+
+Every island takes part in an agreement with every other DynamicLanding island on the machine,
+in this app or any other: one island per display at a time. When a second one shows, the one
+that matters less hides at once and keeps its content; when the winner hides, the loser shows
+itself again. Nothing to set up.
+
+```swift
+var config = IslandConfiguration()
+config.priority = .urgent              // a prompt; holds the notch against a timer
+let island = DynamicLanding(configuration: config)
+
+island.onYield = { timer.pause() }     // another island took the notch; this one has hidden
+island.onResume = { timer.resume() }   // the notch is free; this one is showing again
+```
+
+Priorities are `.background`, `.normal` (the default), `.high` and `.urgent`, or any integer. A
+higher priority wins; between equals the island shown last wins. `isYielded` says whether the
+island is waiting. `configuration.coordination = .none` opts out.
+
+[Docs/Coordination.md](Docs/Coordination.md) has the agreement in full, with the message format,
+so other implementations can join it.
+
 ## Configuration
 
 ```swift
@@ -146,6 +171,8 @@ let island = DynamicLanding(configuration: config)
 | `slotPadding` | 8 pt | Padding around each compact view |
 | `virtualNotchWidth` | 180 pt | Notch width used when you force `.notch` on a screen without one |
 | `hoverBehavior` | `[]` | `.keepVisible`: a `hide()` waits (up to 10 s) while the pointer is on the island. `.highlight`: the island brightens under the pointer |
+| `coordination` | `.shared` | `.shared` takes part in the agreement with other islands; `.none` shows regardless |
+| `priority` | `.normal` | How the island ranks against others wanting the same notch; see above |
 
 You can change `island.configuration` at any time; it applies from the next change of state.
 
@@ -161,7 +188,8 @@ rearranged while the island is visible, it moves with them.
   animation has finished. A `show` cancels a `hide` in progress; a second `hide` waits for the one
   already running. So `Task { await island.show(…) }; Task { await island.hide() }` ends hidden.
 - **One island per `DynamicLanding`.** Showing repeatedly reshapes the same window; it never opens
-  a second one. Create one instance per indicator and keep a reference to it.
+  a second one. Create one instance per indicator and keep a reference to it. Two instances in
+  one app take part in the agreement like two apps would.
 - **Content is released once the island has hidden**, so views inside it stop running.
 - **Never more than half the screen.** Oversized content is clipped, never pushed off-screen.
 
@@ -189,7 +217,9 @@ swift run DynamicLandingDemo
 
 A menu-bar icon appears. Its menu shows the compact island with a ticking timer (⌘1) or the
 expanded card (⌘2), hides it (⌘0), switches between the automatic, notch and pill styles, and
-toggles the shadow. Click the island to hide it.
+toggles the shadow. Click the island to hide it. "Interrupt with an urgent island" (⌘3) shows a
+second, urgent island for three seconds: the timer yields to it and comes back afterwards, which
+is what another app's island does. Run two copies of the demo to see it across processes.
 
 ## Requirements
 
@@ -200,7 +230,7 @@ toggles the shadow. Click the island to hide it.
 ## Limitations
 
 - macOS only.
-- One island per instance; several islands on the same screen will overlap.
+- One island per instance. Several islands that opt out of coordination on the same screen overlap.
 - `.material` currently always renders the ultra-thin material.
 - While visible, the island covers whatever menu-bar items are behind it.
 
