@@ -60,7 +60,9 @@ struct IslandGeometryTests {
     @Test func compactOnAPillIsTwoSlotsWithAGap() throws {
         let l = layout(.compact, notchless, .automatic)
         #expect(l.look == .pill)
-        #expect(l.rect.height == 32)
+        // In the menu bar's line, not hanging below it.
+        #expect(l.rect.height == notchless.menuBarHeight)
+        #expect(layout(.compact, notchless, .pill(cornerRadius: 16)).rect.height == 32)
         let leading = try #require(l.leadingSlot), trailing = try #require(l.trailingSlot)
         #expect(trailing.minX - leading.maxX == 8)
         #expect(l.rect.width == CGFloat(24 + 40 + 3 * 8))

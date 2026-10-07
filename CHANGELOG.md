@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.1
+
+- No wobble when the island changes size. A state change animated toward the previous
+  content's size (zero after a hide) and was re-aimed a frame later, when the new content had
+  been measured. The panel now lays the island out before every change, so the content is
+  measured first and the island moves once, straight to the size it needs.
+- On a screen without a notch, the `.automatic` compact island is as tall as the menu bar
+  instead of 32 pt, so it sits in the menu bar's line rather than hanging below it as if there
+  were a notch. Explicit `.pill` and `.notch` styles keep `compactHeight`.
+- A notch is read only on the Mac's built-in display; an external display never gets one.
+
 ## 0.2.0
 
 Islands share the notch. Every `DynamicLanding` on the machine, in any app, now takes part in

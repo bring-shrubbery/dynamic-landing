@@ -10,7 +10,9 @@ public struct IslandConfiguration: Sendable {
     public var background: IslandBackground = .black
     public var foreground: Color = .white
     public var contentPadding: EdgeInsets = EdgeInsets(top: 10, leading: 16, bottom: 12, trailing: 16)
-    /// The compact island's height on a notchless screen (a notched screen uses the notch's).
+    /// The compact island's height on a notchless screen with an explicit `.pill` or `.notch`
+    /// style. A notched screen uses the notch's height, and `.automatic` on a notchless screen
+    /// the menu bar's, so it sits in the menu bar's line.
     public var compactHeight: CGFloat = 32
     /// Space above expanded content on a notchless screen (a notched screen uses the notch's height).
     public var expandedTopInset: CGFloat = 8

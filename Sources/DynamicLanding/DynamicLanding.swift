@@ -201,7 +201,9 @@ public final class DynamicLanding {
     }
 
     /// Everything up to the sleep runs synchronously, so the show takes effect the moment it
-    /// is called; cancelling the hide task ends a pending hide's wait at once.
+    /// is called; cancelling the hide task ends a pending hide's wait at once. Presenting the
+    /// panel measures the new content first, so the state change animates once, straight to
+    /// the size the content needs.
     private func transition(to state: IslandState) async {
         generation += 1
         hideTask?.cancel()

@@ -55,7 +55,7 @@ Or in `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/bring-shrubbery/dynamic-landing", from: "0.2.0"),
+    .package(url: "https://github.com/bring-shrubbery/dynamic-landing", from: "0.2.1"),
 ],
 targets: [
     .target(name: "MyApp", dependencies: [.product(name: "DynamicLanding", package: "dynamic-landing")]),
@@ -164,7 +164,7 @@ let island = DynamicLanding(configuration: config)
 | `background` | `.black` | `.color(_:)` for any colour, `.material(_:)` for a translucent material |
 | `foreground` | `.white` | Default foreground style for your content |
 | `contentPadding` | 10 · 16 · 12 · 16 | Space around expanded content (top, leading, bottom, trailing) |
-| `compactHeight` | 32 pt | Height of the compact pill on a screen without a notch |
+| `compactHeight` | 32 pt | Height of the compact island on a screen without a notch, for an explicit `.pill` or `.notch` style (`.automatic` there matches the menu bar's height) |
 | `expandedTopInset` | 8 pt | Space above expanded content on a screen without a notch |
 | `notchCornerRadii` | top 15, bottom 20 | Corner radii of the notch look; the top corners flare into the menu bar |
 | `pillCornerRadius` | 16 pt | Bottom corner radius of the pill look |

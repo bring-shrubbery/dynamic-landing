@@ -48,7 +48,10 @@ public enum IslandGeometry {
             ? CGSize(width: configuration.virtualNotchWidth, height: configuration.compactHeight) : nil)
         let p = configuration.contentPadding
         let slotWidths = (leading: compactSlotSizes.leading.width, trailing: compactSlotSizes.trailing.width)
-        let compactHeight = notch?.height ?? configuration.compactHeight
+        // On a screen without a notch, `.automatic` sits in the menu bar's own line: a fixed
+        // height taller than the menu bar hung below it, as if leaving room for a notch.
+        let compactHeight: CGFloat = notch?.height
+            ?? (configuration.style == .automatic ? metrics.menuBarHeight : configuration.compactHeight)
 
         // The expanded size does not depend on the state: content that is not showing is still
         // laid out at the place it has when it shows, so the view can fade it there (IslandView).

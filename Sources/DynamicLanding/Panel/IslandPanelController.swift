@@ -60,6 +60,16 @@ final class IslandPanelController {
         // The old chain (if any) is stale now; this one replaces it.
         observeLayout()
         panel?.orderFrontRegardless()
+        measureContent()
+    }
+
+    /// Lays the island out now, which measures content set since the last pass at once (the
+    /// size readers report during the pass). Called before every state change is animated: the
+    /// island's size comes from those measurements, and without this the change animated toward
+    /// the previous content's size and was re-aimed a frame later, when the new size arrived —
+    /// a two-step resize that read as a wobble.
+    func measureContent() {
+        panel?.contentView?.layoutSubtreeIfNeeded()
     }
 
     /// Hides the panel and stops watching the mouse and the screen until the next `present`.

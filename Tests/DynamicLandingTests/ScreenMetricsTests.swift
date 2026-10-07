@@ -44,6 +44,10 @@ struct ScreenMetricsTests {
         #expect(ScreenMetrics.notchSize(frameWidth: 1512, leftAuxiliaryWidth: 656, rightAuxiliaryWidth: nil, topInset: 38) == nil)
     }
 
+    @Test func onlyTheMacsOwnDisplayHasANotch() {
+        #expect(ScreenMetrics.notchSize(frameWidth: 1512, leftAuxiliaryWidth: 656, rightAuxiliaryWidth: 656, topInset: 38, isBuiltIn: false) == nil)
+    }
+
     @Test func notchSizeNeedsATopInset() {
         #expect(ScreenMetrics.notchSize(frameWidth: 1512, leftAuxiliaryWidth: 656, rightAuxiliaryWidth: 656, topInset: 0) == nil)
     }
