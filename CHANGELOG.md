@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.2
+
+- The island is above the menu bar, as intended. Making the panel a floating panel reset its
+  level to `.floating`, below the menu bar and full-screen apps, and that came after the level
+  was set. On a notchless screen the menu bar covered the island's top, so it looked pushed
+  down; full-screen Spaces did not show it.
+- An island without a fixed screen shows on the screen you are using — the one holding the
+  frontmost app's window, else the one under the pointer — and moves there when you switch
+  Space or app. It used to stay on `NSScreen.main`, which for an app with no key window is the
+  first display.
+
 ## 0.2.1
 
 - No wobble when the island changes size. A state change animated toward the previous

@@ -10,9 +10,11 @@ final class IslandPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = false
-        level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 1)
-        collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
+        // `isFloatingPanel` sets the level to `.floating` (3), below the menu bar and full-screen
+        // windows, so it must come first: set after the level, it silently undid it.
         isFloatingPanel = true
+        level = Self.islandLevel
+        collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
         hidesOnDeactivate = false
         isMovable = false
         isReleasedWhenClosed = false
@@ -25,6 +27,10 @@ final class IslandPanel: NSPanel {
     override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
         frameRect
     }
+
+    /// Above the menu bar, so the island covers it on a notchless screen and shows over
+    /// full-screen apps.
+    static let islandLevel = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 1)
 
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }

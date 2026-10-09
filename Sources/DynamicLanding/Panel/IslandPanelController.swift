@@ -15,6 +15,10 @@ final class IslandPanelController {
     private var panel: IslandPanel?
     private var mouseMonitors: [Any] = []
     private var screenObserver: NSObjectProtocol?
+    private var focusObservers: [NSObjectProtocol] = []
+    /// Called while presented when the user moves to another Space or app, so the owner can
+    /// put the island on the screen they are now using.
+    var onFocusChange: (() -> Void)?
     private var pollTask: Task<Void, Never>?
     private var isPresented = false
     /// Bumped on every present and dismiss; a layout-observation chain re-arms only while
@@ -56,6 +60,7 @@ final class IslandPanelController {
             installMouseMonitors()
             startPolling()
             observeScreenChanges()
+            observeFocusChanges()
         }
         // The old chain (if any) is stale now; this one replaces it.
         observeLayout()
@@ -82,6 +87,8 @@ final class IslandPanelController {
         pollTask?.cancel(); pollTask = nil
         if let screenObserver { NotificationCenter.default.removeObserver(screenObserver) }
         screenObserver = nil
+        for observer in focusObservers { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
+        focusObservers.removeAll()
         panel?.ignoresMouseEvents = true
         if model.isHovering { model.isHovering = false }
     }
@@ -154,12 +161,28 @@ final class IslandPanelController {
         }
     }
 
+    /// Another Space, or another app in front: the island follows to that screen. Spaces are
+    /// covered by the panel's collection behaviour too; the panel is brought to the front again
+    /// there in any case.
+    private func observeFocusChanges() {
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.activeSpaceDidChangeNotification, NSWorkspace.didActivateApplicationNotification] {
+            focusObservers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                Task { @MainActor in
+                    guard let self, self.isPresented else { return }
+                    self.panel?.orderFrontRegardless()
+                    self.onFocusChange?()
+                }
+            })
+        }
+    }
+
     private func screenParametersChanged() {
         guard isPresented else { return }
         // NSScreen objects are recreated on a reconfiguration; the display number is stable.
         let current = screen.flatMap(Self.displayNumber).flatMap { number in
             NSScreen.screens.first { Self.displayNumber(of: $0) == number }
-        } ?? NSScreen.main
+        } ?? FocusedScreen.current()
         guard let current else { return }
         screen = current
         model.metrics = ScreenMetrics(screen: current)

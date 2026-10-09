@@ -55,7 +55,7 @@ Or in `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/bring-shrubbery/dynamic-landing", from: "0.2.1"),
+    .package(url: "https://github.com/bring-shrubbery/dynamic-landing", from: "0.2.2"),
 ],
 targets: [
     .target(name: "MyApp", dependencies: [.product(name: "DynamicLanding", package: "dynamic-landing")]),

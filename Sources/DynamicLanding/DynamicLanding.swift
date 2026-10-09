@@ -44,10 +44,11 @@ public final class DynamicLanding {
         set { model.onTap = newValue }
     }
 
-    /// `screen` nil means `NSScreen.main` at each show. `presentsPanel: false` is the headless
+    /// `screen` nil means the screen the user is working on, followed as they move between
+    /// Spaces, apps and displays (see `FocusedScreen`). `presentsPanel: false` is the headless
     /// mode for tests and previews: state and content change, no window appears.
     public init(configuration: IslandConfiguration = IslandConfiguration(), screen: NSScreen? = nil, presentsPanel: Bool = true) {
-        let target = screen ?? NSScreen.main
+        let target = screen ?? FocusedScreen.current()
         let metrics = target.map { ScreenMetrics(screen: $0) }
             ?? ScreenMetrics(frame: CGRect(x: 0, y: 0, width: 1440, height: 900), notchSize: nil, menuBarHeight: 24)
         self.model = IslandModel(configuration: configuration, metrics: metrics)
@@ -55,6 +56,16 @@ public final class DynamicLanding {
         self.controller = presentsPanel ? IslandPanelController(model: model) : nil
         self.coordinator = IslandCoordinator(identity: Self.identity(), bus: DistributedIslandBus.shared)
         wireCoordinator()
+        controller?.onFocusChange = { [weak self] in self?.followFocus() }
+    }
+
+    /// The user moved to another Space or app: an island not pinned to a screen moves to the
+    /// one they are using now, and claims the notch there.
+    private func followFocus() {
+        guard screen == nil, requested != .hidden, !isYielded,
+              let target = FocusedScreen.current(), target != controller?.screen else { return }
+        let state = requested
+        Task { @MainActor in await self.present(state) }
     }
 
     /// Headless, with explicit metrics and a bus of the caller's choosing (tests).
@@ -195,7 +206,7 @@ public final class DynamicLanding {
 
     private func currentDisplayID() -> UInt32 {
         if let displayIDOverride { return displayIDOverride }
-        let target = screen ?? NSScreen.main
+        let target = screen ?? FocusedScreen.current()
         let number = target?.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
         return number?.uint32Value ?? 0
     }
@@ -208,7 +219,7 @@ public final class DynamicLanding {
         generation += 1
         hideTask?.cancel()
         hideTask = nil
-        if let controller, let target = screen ?? NSScreen.main {
+        if let controller, let target = screen ?? FocusedScreen.current() {
             model.metrics = ScreenMetrics(screen: target)
             controller.present(on: target)
         }
