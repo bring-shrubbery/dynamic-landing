@@ -178,9 +178,11 @@ You can change `island.configuration` at any time; it applies from the next chan
 
 ### Which screen
 
-`DynamicLanding()` follows `NSScreen.main` — the display with the active window — each time it is
-shown. Pass `DynamicLanding(screen: someScreen)` to pin it to one display. If displays are
-rearranged while the island is visible, it moves with them.
+`DynamicLanding()` shows on the screen you are using: the one holding the frontmost app's
+window, else the one under the pointer. While it is visible it follows you there when you switch
+Space or app, and it shows on every Space, full-screen ones included. Pass
+`DynamicLanding(screen: someScreen)` to pin it to one display. If displays are rearranged while
+the island is visible, it moves with them.
 
 ## Behaviour you can rely on
 
