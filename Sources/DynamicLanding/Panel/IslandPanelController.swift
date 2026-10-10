@@ -30,14 +30,16 @@ final class IslandPanelController {
         self.model = model
     }
 
-    func present(on screen: NSScreen) {
+    /// Puts the panel on `screen`, with the island laid out for `metrics`.
+    func present(on screen: NSScreen, metrics: ScreenMetrics) {
         self.screen = screen
         epoch += 1
         let target = Self.panelFrame(for: screen)
         if let panel {
             // The target screen may have changed since the last show.
-            if panel.frame != target { panel.setFrame(target, display: false) }
+            moveInstantly(panel, to: target, metrics: metrics)
         } else {
+            model.metrics = metrics
             let panel = IslandPanel(contentRect: target)
             let hosting = NSHostingView(rootView: IslandView(model: model).ignoresSafeArea())
             // The island sits under the notch on purpose: no safe-area inset may push it down.
@@ -185,9 +187,26 @@ final class IslandPanelController {
         } ?? FocusedScreen.current()
         guard let current else { return }
         screen = current
-        model.metrics = ScreenMetrics(screen: current)
-        let target = Self.panelFrame(for: current)
-        if let panel, panel.frame != target { panel.setFrame(target, display: false) }
+        if let panel {
+            moveInstantly(panel, to: Self.panelFrame(for: current), metrics: ScreenMetrics(screen: current))
+        } else {
+            model.metrics = ScreenMetrics(screen: current)
+        }
         refreshMousePassThrough()
+    }
+
+    /// Moves the panel to another screen (or resizes it for a changed one) with no animation.
+    /// The island's layout animates every change, and a new screen changes it too: animated,
+    /// the island slid across from where it sat on the old screen. Nothing happens when the
+    /// screen is the same, so content changes there still animate.
+    private func moveInstantly(_ panel: IslandPanel, to frame: NSRect, metrics: ScreenMetrics) {
+        guard panel.frame != frame || model.metrics != metrics else { return }
+        var instant = Transaction()
+        instant.disablesAnimations = true
+        withTransaction(instant) {
+            model.metrics = metrics
+            if panel.frame != frame { panel.setFrame(frame, display: false) }
+            panel.contentView?.layoutSubtreeIfNeeded()
+        }
     }
 }

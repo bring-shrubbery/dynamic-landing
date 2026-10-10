@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.3
+
+- The island no longer slides in from the side after moving to another screen. The screen's
+  metrics and the panel's frame changed in the same update as the show, and the layout's
+  animation moved the island across from its place on the old screen. A screen change is now
+  applied at once, without animation, before the show animates; on the same screen nothing
+  changes, so content updates still animate.
+
 ## 0.2.2
 
 - The island is above the menu bar, as intended. Making the panel a floating panel reset its

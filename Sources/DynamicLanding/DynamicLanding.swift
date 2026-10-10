@@ -220,8 +220,7 @@ public final class DynamicLanding {
         hideTask?.cancel()
         hideTask = nil
         if let controller, let target = screen ?? FocusedScreen.current() {
-            model.metrics = ScreenMetrics(screen: target)
-            controller.present(on: target)
+            controller.present(on: target, metrics: ScreenMetrics(screen: target))
         }
         withAnimation(model.configuration.animation) { model.setState(state) }
         controller?.refreshMousePassThrough()
