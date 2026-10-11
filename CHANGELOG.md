@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.5
+
+- On a screen with a notch the notch stays put and the island goes in and out of it. The
+  expanded island drops down from the screen's top edge at its own width and retracts straight
+  up, changing only its height; compact and expanded pass through the notch on the way to each
+  other: the compact island shrinks into the notch, then the expanded one drops down, and the
+  reverse. Screens without a notch, and forced notch or pill styles there, morph as before.
+
 ## 0.2.4
 
 - Showing again right after a hide no longer opens a narrow, empty island. The hide cleared the

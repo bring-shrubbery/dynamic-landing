@@ -38,6 +38,14 @@ public enum IslandGeometry {
         state: IslandState, metrics: ScreenMetrics, configuration: IslandConfiguration,
         compactSlotSizes: (leading: CGSize, trailing: CGSize), expandedContentSize: CGSize
     ) -> IslandLayout {
+        layout(pose: IslandPose(state), metrics: metrics, configuration: configuration,
+               compactSlotSizes: compactSlotSizes, expandedContentSize: expandedContentSize)
+    }
+
+    static func layout(
+        pose: IslandPose, metrics: ScreenMetrics, configuration: IslandConfiguration,
+        compactSlotSizes: (leading: CGSize, trailing: CGSize), expandedContentSize: CGSize
+    ) -> IslandLayout {
         let look = resolvedLook(style: configuration.style, metrics: metrics)
         let radii = cornerRadii(for: look, style: configuration.style, configuration: configuration)
         let padding = configuration.slotPadding
@@ -70,7 +78,7 @@ public enum IslandGeometry {
         var width: CGFloat
         var height: CGFloat
 
-        switch state {
+        switch pose {
         case .hidden:
             if look == .notch, let n = metrics.notchSize {
                 width = n.width; height = n.height
@@ -88,6 +96,9 @@ public enum IslandGeometry {
         case .expanded:
             width = expandedWidth
             height = expandedHeight
+        case .tucked:
+            width = expandedWidth
+            height = 0
         }
 
         // The compact slots, beside the notch (or at the pill's ends) at the island's current

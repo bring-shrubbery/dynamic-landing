@@ -172,8 +172,27 @@ public final class DynamicLanding {
     }
 
     private func applyHidden() {
-        withAnimation(model.configuration.animation) { model.setState(.hidden) }
+        // On a notched screen the expanded island retracts straight up, at its own width.
+        let retracts = model.stagesThroughNotch && model.pose == .expanded
+        withAnimation(model.configuration.animation) {
+            model.setState(.hidden, pose: retracts ? .tucked : .hidden)
+        }
         controller?.refreshMousePassThrough()
+    }
+
+    /// Draws the island in `pose` at once (with `state`, when given), so the animated step
+    /// that follows starts from it.
+    private func snap(_ pose: IslandPose, state: IslandState? = nil) {
+        var instant = Transaction()
+        instant.disablesAnimations = true
+        withTransaction(instant) {
+            if let state { model.setState(state, pose: pose) } else { model.setPose(pose) }
+        }
+        controller?.measureContent()
+    }
+
+    private func animate(_ change: () -> Void) {
+        withAnimation(model.configuration.animation, change)
     }
 
     // MARK: - Sharing the notch
@@ -227,10 +246,37 @@ public final class DynamicLanding {
         generation += 1
         hideTask?.cancel()
         hideTask = nil
+        let mine = generation
         if let controller, let target = screen ?? FocusedScreen.current() {
             controller.present(on: target, metrics: ScreenMetrics(screen: target))
         }
-        withAnimation(model.configuration.animation) { model.setState(state) }
+        let from = model.pose
+        guard model.stagesThroughNotch, state != .hidden else {
+            animate { model.setState(state) }
+            controller?.refreshMousePassThrough()
+            try? await Task.sleep(for: animationDuration)
+            return
+        }
+        // On a notched screen the notch stays put and the island goes in and out of it: the
+        // expanded island only ever changes height (from and to `.tucked`), and compact and
+        // expanded pass through the notch on their way to each other.
+        switch (from, state) {
+        case (.compact, .expanded), (.expanded, .compact):
+            animate { model.setState(state, pose: from == .compact ? .hidden : .tucked) }
+            controller?.refreshMousePassThrough()
+            try? await Task.sleep(for: animationDuration)
+            guard generation == mine else { return }
+            snap(state == .expanded ? .tucked : .hidden)
+            animate { model.setPose(IslandPose(state)) }
+        case (.hidden, .expanded), (.tucked, .expanded):
+            snap(.tucked, state: state)
+            animate { model.setPose(.expanded) }
+        case (.tucked, .compact):
+            snap(.hidden, state: state)
+            animate { model.setPose(.compact) }
+        default:
+            animate { model.setState(state) }
+        }
         controller?.refreshMousePassThrough()
         try? await Task.sleep(for: animationDuration)
     }

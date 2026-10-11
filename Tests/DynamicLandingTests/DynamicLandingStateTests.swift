@@ -178,3 +178,82 @@ struct DynamicLandingStateTests {
         #expect(MousePassThrough.shouldIgnoreMouse(pointer: CGPoint(x: 700, y: 950), islandRect: .zero))
     }
 }
+
+/// On a notched screen the notch stays put and the island goes in and out of it.
+@MainActor
+struct NotchStagingTests {
+    private let notched = ScreenMetrics(frame: CGRect(x: 0, y: 0, width: 1512, height: 982), notchSize: CGSize(width: 200, height: 38), menuBarHeight: 38)
+    private let notchless = ScreenMetrics(frame: CGRect(x: 0, y: 0, width: 1440, height: 900), notchSize: nil, menuBarHeight: 24)
+
+    private func island(_ metrics: ScreenMetrics) -> DynamicLanding {
+        var c = IslandConfiguration(); c.animation = .linear(duration: 0.01); c.animationDuration = .milliseconds(20)
+        return DynamicLanding(configuration: c, metrics: metrics, presentsPanel: false, bus: LocalIslandBus())
+    }
+
+    /// Records every pose the island is drawn in from now on.
+    private final class Poses { var seen: [IslandPose] = [] }
+    private func poses(of island: DynamicLanding) -> () -> [IslandPose] {
+        let poses = Poses()
+        island.model.onPoseChange = { poses.seen.append($0) }
+        return { poses.seen }
+    }
+
+    @Test func theExpandedIslandOnlyChangesHeight() {
+        let config = IslandConfiguration()
+        let size = (leading: CGSize(width: 30, height: 14), trailing: CGSize(width: 40, height: 14))
+        let content = CGSize(width: 260, height: 64)
+        let expanded = IslandGeometry.layout(pose: .expanded, metrics: notched, configuration: config, compactSlotSizes: size, expandedContentSize: content)
+        let tucked = IslandGeometry.layout(pose: .tucked, metrics: notched, configuration: config, compactSlotSizes: size, expandedContentSize: content)
+        #expect(tucked.rect.width == expanded.rect.width)
+        #expect(tucked.rect.midX == expanded.rect.midX)
+        #expect(tucked.rect.height == 0 && tucked.rect.maxY == expanded.rect.maxY)
+        #expect(tucked.contentRect == expanded.contentRect)
+    }
+
+    @Test func showingAndHidingTheExpandedIslandGoesThroughTheTuckedPose() async {
+        let i = island(notched)
+        await i.show(expanded: { Text("A") })
+        #expect(i.state == .expanded && i.model.pose == .expanded)
+        await i.hide()
+        #expect(i.state == .hidden && i.model.pose == .tucked)
+        // Shown again from there, it starts tucked and grows down.
+        await i.show(expanded: { Text("B") })
+        #expect(i.model.pose == .expanded)
+    }
+
+    @Test func compactAndExpandedPassThroughTheNotch() async {
+        let i = island(notched)
+        await i.show(compactLeading: { Text("L") }, trailing: { Text("T") })
+        let seen = poses(of: i)
+        await i.show(expanded: { Text("Big") })
+        await Task.yield()
+        #expect(i.state == .expanded && i.model.pose == .expanded)
+        #expect(seen() == [.hidden, .tucked, .expanded])
+
+        let back = poses(of: i)
+        await i.show(compactLeading: { Text("L") }, trailing: { Text("T") })
+        await Task.yield()
+        #expect(i.model.pose == .compact)
+        #expect(back() == [.tucked, .hidden, .compact])
+    }
+
+    @Test func theStateChangesTheMomentAShowIsCalled() async {
+        let i = island(notched)
+        await i.show(compactLeading: { Text("L") }, trailing: { Text("T") })
+        let showing = Task { await i.show(expanded: { Text("Big") }) }
+        await Task.yield()
+        #expect(i.state == .expanded)
+        await showing.value
+    }
+
+    @Test func withoutANotchEveryChangeIsOneMorph() async {
+        let i = island(notchless)
+        await i.show(compactLeading: { Text("L") }, trailing: { Text("T") })
+        let seen = poses(of: i)
+        await i.show(expanded: { Text("Big") })
+        await Task.yield()
+        #expect(seen() == [.expanded])
+        await i.hide()
+        #expect(i.model.pose == .hidden)
+    }
+}
