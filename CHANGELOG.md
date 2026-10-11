@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.6
+
+- Content is never squeezed or moved while the island changes size. Each piece keeps its
+  natural size and its place relative to the island's centre, and only the island's shape
+  covers or reveals it. Pieces were also clipped to their own frames, which animate when the
+  content changes, so new content was cut to the old one's size mid-animation and slid
+  sideways; they are not any more. The compact slots stay where they sit in the compact island
+  in every pose, so collapsing into the notch covers them instead of pulling them inward.
+
 ## 0.2.5
 
 - On a screen with a notch the notch stays put and the island goes in and out of it. The

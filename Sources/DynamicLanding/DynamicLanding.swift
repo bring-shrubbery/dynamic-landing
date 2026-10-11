@@ -16,7 +16,7 @@ import SwiftUI
 @MainActor @Observable
 public final class DynamicLanding {
     public let model: IslandModel
-    @ObservationIgnored private let controller: IslandPanelController?
+    @ObservationIgnored private(set) var controller: IslandPanelController?
     @ObservationIgnored private let screen: NSScreen?
     @ObservationIgnored private var hideTask: Task<Void, Never>?
     @ObservationIgnored private var generation = 0
@@ -248,7 +248,7 @@ public final class DynamicLanding {
         hideTask = nil
         let mine = generation
         if let controller, let target = screen ?? FocusedScreen.current() {
-            controller.present(on: target, metrics: ScreenMetrics(screen: target))
+            controller.present(on: target, metrics: metricsOverride ?? ScreenMetrics(screen: target))
         }
         let from = model.pose
         guard model.stagesThroughNotch, state != .hidden else {
@@ -282,4 +282,7 @@ public final class DynamicLanding {
     }
 
     private var animationDuration: Duration { model.configuration.animationDuration }
+
+    /// Metrics used instead of the screen's own, for tests (a notch on a notchless display).
+    var metricsOverride: ScreenMetrics?
 }

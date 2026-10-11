@@ -109,11 +109,15 @@ struct IslandGeometryTests {
                     #expect(content.size == expandedContent.size, "\(state) \(style)")
                     #expect(content.minY == expandedContent.minY, "\(state) \(style)")
                     #expect(abs(content.midX - l.rect.width / 2) < 0.5, "\(state) \(style)")
-                    // The slots are as tall as the compact island in every state and never
-                    // leave the island.
-                    for slot in [try #require(l.leadingSlot), try #require(l.trailingSlot)] {
+                    // The slots are where they sit in the compact island, the same size and the
+                    // same distance from the centre, in every state: the island covers them or
+                    // reveals them but never moves or squeezes them.
+                    let pairs = [(try #require(l.leadingSlot), try #require(compact.leadingSlot)),
+                                 (try #require(l.trailingSlot), try #require(compact.trailingSlot))]
+                    for (slot, inCompact) in pairs {
+                        #expect(slot.size == inCompact.size, "\(state) \(style)")
                         #expect(slot.height == compactHeight, "\(state) \(style)")
-                        #expect(slot.minX >= 0 && slot.maxX <= l.rect.width + 0.01, "\(state) \(style) \(slot)")
+                        #expect(abs((slot.midX - l.rect.width / 2) - (inCompact.midX - compact.rect.width / 2)) < 0.01, "\(state) \(style)")
                     }
                 }
             }

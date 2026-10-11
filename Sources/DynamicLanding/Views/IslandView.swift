@@ -22,7 +22,7 @@ struct IslandView: View {
             // grows, new content is laid out for its final size at once, and the parts that fall
             // in the flares or the rounded corners would otherwise show outside the black.
             content(layout: layout)
-                .frame(width: layout.rect.width, height: layout.rect.height, alignment: .topLeading)
+                .frame(width: layout.rect.width, height: layout.rect.height, alignment: .top)
                 .clipShape(shape)
         }
         // The whole island is the tap target: buttons in the content take precedence, a tap
@@ -41,32 +41,37 @@ struct IslandView: View {
     /// Every piece stays in the tree in every state and fades in or out where it belongs. A view
     /// removed with a transition is drawn outside its parent's clip for a frame on its way out,
     /// which showed the content beside a closing island.
+    ///
+    /// Every piece keeps its natural size and is placed by its centre relative to the island's
+    /// centre, which the island never moves: while the island grows, shrinks or changes shape,
+    /// content stays exactly where and as big as it is when shown, and only the island's shape
+    /// (the caller's `clipShape`) covers or reveals it. Pieces are not clipped to their own
+    /// frames: those frames animate when the content changes, and clipping to them cut new
+    /// content to the old one's size mid-animation, which read as text being squeezed.
     @ViewBuilder
     private func content(layout: IslandLayout) -> some View {
-        ZStack(alignment: .topLeading) {
+        let centre = layout.rect.width / 2
+        ZStack(alignment: .top) {
             if let l = layout.leadingSlot, let t = layout.trailingSlot {
                 model.compactLeading
                     .fixedSize().readSize { model.leadingSize = $0 }
                     .id(model.contentEpoch)
                     .frame(width: l.width, height: l.height, alignment: .center)
-                    .clipped()
-                    .offset(x: l.minX, y: l.minY)
+                    .offset(x: l.midX - centre, y: l.minY)
                     .opacity(model.state == .compact ? 1 : 0)
                 model.compactTrailing
                     .fixedSize().readSize { model.trailingSize = $0 }
                     .id(model.contentEpoch)
                     .frame(width: t.width, height: t.height, alignment: .center)
-                    .clipped()
-                    .offset(x: t.minX, y: t.minY)
+                    .offset(x: t.midX - centre, y: t.minY)
                     .opacity(model.state == .compact ? 1 : 0)
             }
             if let c = layout.contentRect {
                 model.expandedContent
                     .fixedSize().readSize { model.contentSize = $0 }
                     .id(model.contentEpoch)
-                    .frame(width: c.width, height: c.height, alignment: .topLeading)
-                    .clipped()
-                    .offset(x: c.minX, y: c.minY)
+                    .frame(width: c.width, height: c.height, alignment: .top)
+                    .offset(x: c.midX - centre, y: c.minY)
                     .opacity(model.state == .expanded ? 1 : 0)
             }
         }
