@@ -15,6 +15,25 @@ struct IslandPanelTests {
         #expect(panel.constrainFrameRect(pinned, to: screen) == pinned)
     }
 
+    /// Hidden, the island's window stays ordered in, transparent and click-through, so it keeps
+    /// its place on every Space; ordered out and in again it was not always put on the Space in
+    /// front.
+    @Test func aHiddenIslandKeepsItsWindowInPlace() {
+        guard let screen = NSScreen.screens.first else { return }
+        let model = IslandModel(configuration: IslandConfiguration(), metrics: ScreenMetrics(screen: screen))
+        let controller = IslandPanelController(model: model)
+        controller.prepare(on: screen, metrics: ScreenMetrics(screen: screen))
+        #expect(controller.window?.isVisible == true)
+        #expect(controller.window?.alphaValue == 0)
+        controller.present(on: screen, metrics: ScreenMetrics(screen: screen))
+        #expect(controller.window?.alphaValue == 1)
+        controller.dismiss()
+        #expect(controller.window?.isVisible == true)
+        #expect(controller.window?.alphaValue == 0)
+        #expect(controller.window?.ignoresMouseEvents == true)
+        controller.window?.orderOut(nil)
+    }
+
     /// Above the menu bar, and on every Space including full-screen ones. Making it a floating
     /// panel resets the level to `.floating`, which once undid the level set before it.
     @Test func thePanelSitsAboveTheMenuBarOnEverySpace() {

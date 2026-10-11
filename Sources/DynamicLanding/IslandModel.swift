@@ -22,6 +22,11 @@ public final class IslandModel {
     /// in-place update that keeps its identity and `@State`, so live content (a ticking
     /// timer re-shown every second) never crossfades.
     var contentGeneration = 0
+    /// Bumped by `clearContent()`. The view gives content this identity, so content set after a
+    /// clear is new to SwiftUI and measured again. Without it, a show right after a hide (the
+    /// same kind of content, set before the cleared island was ever drawn) looked unchanged to
+    /// SwiftUI, its size was never reported again, and the island opened as a narrow empty bar.
+    private(set) var contentEpoch = 0
     public var onTap: (() -> Void)?
 
     public init(configuration: IslandConfiguration, metrics: ScreenMetrics) {
@@ -57,5 +62,6 @@ public final class IslandModel {
         expandedContent = AnyView(EmptyView())
         leadingSize = .zero; trailingSize = .zero; contentSize = .zero
         hasContent = false
+        contentEpoch += 1
     }
 }

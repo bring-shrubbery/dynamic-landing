@@ -42,3 +42,28 @@ struct IslandMeasurementTests {
         #expect(model.trailingSize == CGSize(width: 40, height: 14))
     }
 }
+
+@MainActor
+struct IslandRemeasureTests {
+    /// Recording again right after a hide: the hide clears the content and its sizes, and the
+    /// next show sets content of the same kind before the screen is redrawn. The island must
+    /// measure it again, or it opens as a narrow empty bar.
+    @Test func contentSetAgainRightAfterAClearIsMeasuredAgain() {
+        let metrics = ScreenMetrics(frame: CGRect(x: 0, y: 0, width: 1440, height: 900), notchSize: nil, menuBarHeight: 24)
+        let model = IslandModel(configuration: IslandConfiguration(), metrics: metrics)
+        let hosting = NSHostingView(rootView: IslandView(model: model))
+        hosting.frame = CGRect(x: 0, y: 0, width: 720, height: 450)
+        func compact() {
+            model.setCompact(leading: AnyView(Color.red.frame(width: 30, height: 14)),
+                             trailing: AnyView(Color.red.frame(width: 40, height: 14)))
+        }
+        compact()
+        hosting.layoutSubtreeIfNeeded()
+        #expect(model.leadingSize == CGSize(width: 30, height: 14))
+        model.clearContent()
+        compact()
+        hosting.layoutSubtreeIfNeeded()
+        #expect(model.leadingSize == CGSize(width: 30, height: 14))
+        #expect(model.trailingSize == CGSize(width: 40, height: 14))
+    }
+}

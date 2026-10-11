@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.4
+
+- Showing again right after a hide no longer opens a narrow, empty island. The hide cleared the
+  content and its measured sizes, and content of the same kind set before the cleared island
+  was drawn looked unchanged to SwiftUI, so its size was never reported again. Content set
+  after a clear now has a new identity and is measured.
+- The island's window stays ordered in when the island hides, transparent and click-through,
+  instead of being ordered out and in for every show; it keeps its place on every Space,
+  full-screen apps included. `prepare()` creates it ahead of the first show (call it at launch).
+- The window's moves are logged under the subsystem `com.quassum.dynamic-landing`.
+
 ## 0.2.3
 
 - The island no longer slides in from the side after moving to another screen. The screen's

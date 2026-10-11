@@ -1,7 +1,11 @@
 // DynamicLanding — IslandPanelController.swift
 import AppKit
 import Observation
+import OSLog
 import SwiftUI
+
+/// What the island does with its window, for `log show --predicate 'subsystem == "com.quassum.dynamic-landing"'`.
+let islandLog = Logger(subsystem: "com.quassum.dynamic-landing", category: "panel")
 
 /// Owns the panel for one screen: sizes it to the top-centre half of the screen, hosts the
 /// island view top-aligned inside it, and lets clicks through everywhere but the island.
@@ -25,6 +29,8 @@ final class IslandPanelController {
     /// the epoch it started in is current, so a dismiss→present cycle never leaves two.
     private var epoch = 0
     private(set) var screen: NSScreen?
+    /// The island's window, for tests.
+    var window: NSWindow? { panel }
 
     init(model: IslandModel) {
         self.model = model
@@ -39,6 +45,35 @@ final class IslandPanelController {
             // The target screen may have changed since the last show.
             moveInstantly(panel, to: target, metrics: metrics)
         } else {
+            createPanel(on: screen, metrics: metrics)
+        }
+        panel?.alphaValue = 1
+        if !isPresented {
+            isPresented = true
+            installMouseMonitors()
+            startPolling()
+            observeScreenChanges()
+            observeFocusChanges()
+        }
+        // The old chain (if any) is stale now; this one replaces it.
+        observeLayout()
+        panel?.orderFrontRegardless()
+        measureContent()
+        logWindow("present")
+    }
+
+    /// Creates the panel on `screen`, ordered in but fully transparent, so it is already on
+    /// every Space before the first show. Does nothing once the panel exists.
+    func prepare(on screen: NSScreen, metrics: ScreenMetrics) {
+        guard panel == nil else { return }
+        createPanel(on: screen, metrics: metrics)
+        panel?.alphaValue = 0
+        logWindow("prepare")
+    }
+
+    private func createPanel(on screen: NSScreen, metrics: ScreenMetrics) {
+        let target = Self.panelFrame(for: screen)
+        do {
             model.metrics = metrics
             let panel = IslandPanel(contentRect: target)
             let hosting = NSHostingView(rootView: IslandView(model: model).ignoresSafeArea())
@@ -57,17 +92,12 @@ final class IslandPanelController {
             hosting.layoutSubtreeIfNeeded()
             panel.orderFrontRegardless()
         }
-        if !isPresented {
-            isPresented = true
-            installMouseMonitors()
-            startPolling()
-            observeScreenChanges()
-            observeFocusChanges()
-        }
-        // The old chain (if any) is stale now; this one replaces it.
-        observeLayout()
-        panel?.orderFrontRegardless()
-        measureContent()
+    }
+
+    private func logWindow(_ event: String) {
+        guard let panel else { return }
+        let display = screen.flatMap(Self.displayNumber)?.stringValue ?? "?"
+        islandLog.info("\(event, privacy: .public): display \(display, privacy: .public) frame \(NSStringFromRect(panel.frame), privacy: .public) visible \(panel.isVisible) onActiveSpace \(panel.isOnActiveSpace) occlusionVisible \(panel.occlusionState.contains(.visible)) alpha \(panel.alphaValue) level \(panel.level.rawValue) state \(String(describing: self.model.state), privacy: .public)")
     }
 
     /// Lays the island out now, which measures content set since the last pass at once (the
@@ -80,9 +110,12 @@ final class IslandPanelController {
     }
 
     /// Hides the panel and stops watching the mouse and the screen until the next `present`.
+    /// The panel stays ordered in, transparent and click-through: a window ordered out and in
+    /// again for every show was not always put on the Space in front (other desktops, full-screen
+    /// apps), while one that stays in joins every Space once and keeps them.
     func dismiss() {
         epoch += 1
-        panel?.orderOut(nil)
+        panel?.alphaValue = 0
         isPresented = false
         for monitor in mouseMonitors { NSEvent.removeMonitor(monitor) }
         mouseMonitors.removeAll()
@@ -173,7 +206,9 @@ final class IslandPanelController {
                 Task { @MainActor in
                     guard let self, self.isPresented else { return }
                     self.panel?.orderFrontRegardless()
+                    self.panel?.display()
                     self.onFocusChange?()
+                    self.logWindow(name == NSWorkspace.activeSpaceDidChangeNotification ? "space changed" : "app activated")
                 }
             })
         }

@@ -47,12 +47,14 @@ struct IslandView: View {
             if let l = layout.leadingSlot, let t = layout.trailingSlot {
                 model.compactLeading
                     .fixedSize().readSize { model.leadingSize = $0 }
+                    .id(model.contentEpoch)
                     .frame(width: l.width, height: l.height, alignment: .center)
                     .clipped()
                     .offset(x: l.minX, y: l.minY)
                     .opacity(model.state == .compact ? 1 : 0)
                 model.compactTrailing
                     .fixedSize().readSize { model.trailingSize = $0 }
+                    .id(model.contentEpoch)
                     .frame(width: t.width, height: t.height, alignment: .center)
                     .clipped()
                     .offset(x: t.minX, y: t.minY)
@@ -61,6 +63,7 @@ struct IslandView: View {
             if let c = layout.contentRect {
                 model.expandedContent
                     .fixedSize().readSize { model.contentSize = $0 }
+                    .id(model.contentEpoch)
                     .frame(width: c.width, height: c.height, alignment: .topLeading)
                     .clipped()
                     .offset(x: c.minX, y: c.minY)

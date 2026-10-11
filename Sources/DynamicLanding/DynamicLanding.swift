@@ -59,6 +59,14 @@ public final class DynamicLanding {
         controller?.onFocusChange = { [weak self] in self?.followFocus() }
     }
 
+    /// Creates the island's window now, invisible, instead of at the first show. Call it at
+    /// launch: the window then joins every Space (desktops and full-screen apps) before it is
+    /// first needed. Optional; a show does the same when it has not been done.
+    public func prepare() {
+        guard let target = screen ?? FocusedScreen.current() else { return }
+        controller?.prepare(on: target, metrics: ScreenMetrics(screen: target))
+    }
+
     /// The user moved to another Space or app: an island not pinned to a screen moves to the
     /// one they are using now, and claims the notch there.
     private func followFocus() {
