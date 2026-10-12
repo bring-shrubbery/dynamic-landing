@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.7
+
+- The expanded island slides into and out of the notch at a constant width. It used to shrink
+  in height, and as it got shorter than its flared top corners the shape re-fitted: the body
+  widened to the full flare width in the last pixels, which looked like it spreading sideways
+  out of the notch before vanishing. It is now drawn at its full height and shifted up behind
+  the screen's top edge (`IslandLayout.slide`), so only its lower part shows through a window
+  of the current height and nothing re-fits. Its narrow bottom edge is what shows last.
+
 ## 0.2.6
 
 - Content is never squeezed or moved while the island changes size. Each piece keeps its

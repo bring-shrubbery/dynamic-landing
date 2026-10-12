@@ -11,24 +11,31 @@ struct IslandView: View {
         let layout = model.layout
         let config = model.configuration
         let shape = IslandShape(look: layout.look, topCornerRadius: layout.topCornerRadius, bottomCornerRadius: layout.bottomCornerRadius)
+        // The island is drawn `slide` taller than it shows and shifted up by as much, so while
+        // it is on its way in or out of the notch its lower part slides through a window of
+        // the shown height: the width never changes and the shape never re-fits.
+        let drawn = layout.rect.height + layout.slide
         ZStack(alignment: .top) {
             shape
                 .fill(backgroundStyle(config.background))
                 .overlay(hoverHighlight(config, layout: layout))
                 .islandShadow(config.shadow)
-                .frame(width: layout.rect.width, height: layout.rect.height, alignment: .top)
+                .frame(width: layout.rect.width, height: drawn, alignment: .top)
+                .offset(y: -layout.slide)
 
             // Clipped to the island's own shape, not its bounding rectangle: while the island
             // grows, new content is laid out for its final size at once, and the parts that fall
             // in the flares or the rounded corners would otherwise show outside the black.
             content(layout: layout)
-                .frame(width: layout.rect.width, height: layout.rect.height, alignment: .top)
+                .frame(width: layout.rect.width, height: drawn, alignment: .top)
                 .clipShape(shape)
+                .offset(y: -layout.slide)
         }
         // The whole island is the tap target: buttons in the content take precedence, a tap
-        // anywhere else inside the shape fires `onTap`, and outside the shape nothing is hit.
+        // anywhere else inside the island fires `onTap`.
         .frame(width: layout.rect.width, height: layout.rect.height, alignment: .top)
-        .contentShape(shape)
+        .clipped()
+        .contentShape(Rectangle())
         .onTapGesture { model.onTap?() }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .foregroundStyle(config.foreground)

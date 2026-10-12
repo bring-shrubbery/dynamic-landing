@@ -19,6 +19,12 @@ public struct IslandLayout: Equatable, Sendable {
     public var trailingSlot: CGRect?
     public var contentRect: CGRect?
     public var look: IslandLook
+    /// How far the island's drawing is shifted up behind the screen's top edge: the island is
+    /// drawn `rect.height + slide` tall and only its lowest `rect.height` points show. Non-zero
+    /// only while the expanded island is in or out of the notch (the tucked pose), so it slides
+    /// straight up and down at its own width; its shape never re-fits a smaller height, which
+    /// widened the body as the flared top corners flattened.
+    public var slide: CGFloat = 0
 }
 
 /// The island's layout maths. Pure: the same inputs always give the same layout, so the two
@@ -137,7 +143,8 @@ public enum IslandGeometry {
 
         let rect = CGRect(x: frame.midX - width / 2, y: frame.maxY - height, width: width, height: height)
         return IslandLayout(rect: rect, topCornerRadius: radii.top, bottomCornerRadius: radii.bottom,
-                            leadingSlot: leading, trailingSlot: trailing, contentRect: content, look: look)
+                            leadingSlot: leading, trailingSlot: trailing, contentRect: content, look: look,
+                            slide: pose == .tucked ? expandedHeight : 0)
     }
 
     private static func cornerRadii(for look: IslandLook, style: IslandStyle, configuration: IslandConfiguration) -> (top: CGFloat, bottom: CGFloat) {

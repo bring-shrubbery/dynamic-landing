@@ -208,6 +208,13 @@ struct NotchStagingTests {
         #expect(tucked.rect.midX == expanded.rect.midX)
         #expect(tucked.rect.height == 0 && tucked.rect.maxY == expanded.rect.maxY)
         #expect(tucked.contentRect == expanded.contentRect)
+        // Tucked, the island is drawn at its expanded height and shifted up out of view, so
+        // between the two poses it slides at a constant drawn height, never re-fitting its shape.
+        #expect(tucked.slide == expanded.rect.height && expanded.slide == 0)
+        for pose in [IslandPose.hidden, .compact] {
+            let other = IslandGeometry.layout(pose: pose, metrics: notched, configuration: config, compactSlotSizes: size, expandedContentSize: content)
+            #expect(other.slide == 0)
+        }
     }
 
     @Test func showingAndHidingTheExpandedIslandGoesThroughTheTuckedPose() async {
