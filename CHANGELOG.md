@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.8
+
+- The expanded island no longer shows a band wider than the notch as it closes. It used to
+  rise into the notch at its full width, so its last visible strip was the expanded island's
+  width against a narrower notch. On a notched screen the island now changes one dimension at
+  a time: it rises until only a notch's height of it shows, then narrows into the notch, and
+  opens the reverse way, widening out of the notch at the notch's height before dropping down.
+  Compact and expanded meet at the notch's height too, instead of passing through the notch.
+  The compact slots stay in the shown band while the island rises or drops.
+
 ## 0.2.7
 
 - The expanded island slides into and out of the notch at a constant width. It used to shrink

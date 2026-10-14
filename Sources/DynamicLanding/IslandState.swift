@@ -15,10 +15,12 @@ public enum IslandState: Equatable, Sendable {
 enum IslandPose: Equatable, Sendable {
     /// The state's own shape: none, compact or expanded (`.hidden` covers the notch exactly).
     case hidden, compact, expanded
-    /// As wide as the expanded island but no height, tucked against the screen's top edge.
-    /// On a notched screen the expanded island grows down from here and retracts up into it,
-    /// so it only ever changes height.
-    case tucked
+    /// As wide as the expanded island and as tall as the notch, at the notch's level. On a
+    /// notched screen the island changes one dimension at a time: at the notch's height it
+    /// only changes width, above it only height. So it passes through here on every way to
+    /// or from the expanded shape: the notch or the compact island widens into it and it drops
+    /// down; the expanded island rises back up to it and it narrows away.
+    case docked
 
     init(_ state: IslandState) {
         switch state {

@@ -198,50 +198,84 @@ struct NotchStagingTests {
         return { poses.seen }
     }
 
-    @Test func theExpandedIslandOnlyChangesHeight() {
+    @Test func dockedIsAsWideAsTheExpandedIslandAndAsTallAsTheNotch() throws {
         let config = IslandConfiguration()
         let size = (leading: CGSize(width: 30, height: 14), trailing: CGSize(width: 40, height: 14))
         let content = CGSize(width: 260, height: 64)
         let expanded = IslandGeometry.layout(pose: .expanded, metrics: notched, configuration: config, compactSlotSizes: size, expandedContentSize: content)
-        let tucked = IslandGeometry.layout(pose: .tucked, metrics: notched, configuration: config, compactSlotSizes: size, expandedContentSize: content)
-        #expect(tucked.rect.width == expanded.rect.width)
-        #expect(tucked.rect.midX == expanded.rect.midX)
-        #expect(tucked.rect.height == 0 && tucked.rect.maxY == expanded.rect.maxY)
-        #expect(tucked.contentRect == expanded.contentRect)
-        // Tucked, the island is drawn at its expanded height and shifted up out of view, so
-        // between the two poses it slides at a constant drawn height, never re-fitting its shape.
-        #expect(tucked.slide == expanded.rect.height && expanded.slide == 0)
+        let docked = IslandGeometry.layout(pose: .docked, metrics: notched, configuration: config, compactSlotSizes: size, expandedContentSize: content)
+        #expect(docked.rect.width == expanded.rect.width)
+        #expect(docked.rect.midX == expanded.rect.midX)
+        #expect(docked.rect.height == 38 && docked.rect.maxY == expanded.rect.maxY)
+        #expect(docked.contentRect == expanded.contentRect)
+        // Docked, the island is drawn at its expanded height and shifted up until a notch's
+        // height of it shows, so between the two poses it slides at a constant drawn height,
+        // never re-fitting its shape.
+        #expect(docked.slide == expanded.rect.height - 38 && expanded.slide == 0)
+        // The compact slots stay in the shown band, beside the notch, rather than sliding up.
+        #expect(try #require(docked.leadingSlot).minY == docked.slide)
+        #expect(try #require(docked.trailingSlot).minY == docked.slide)
         for pose in [IslandPose.hidden, .compact] {
             let other = IslandGeometry.layout(pose: pose, metrics: notched, configuration: config, compactSlotSizes: size, expandedContentSize: content)
             #expect(other.slide == 0)
+            #expect(other.leadingSlot?.minY == 0 && other.trailingSlot?.minY == 0)
         }
     }
 
-    @Test func showingAndHidingTheExpandedIslandGoesThroughTheTuckedPose() async {
-        let i = island(notched)
-        await i.show(expanded: { Text("A") })
-        #expect(i.state == .expanded && i.model.pose == .expanded)
-        await i.hide()
-        #expect(i.state == .hidden && i.model.pose == .tucked)
-        // Shown again from there, it starts tucked and grows down.
-        await i.show(expanded: { Text("B") })
-        #expect(i.model.pose == .expanded)
+    /// Nothing wider than the notch is ever drawn shorter than the notch: the band that
+    /// narrows into the notch is exactly as tall as the notch.
+    @Test func noPoseIsShorterThanTheNotch() {
+        let config = IslandConfiguration()
+        let size = (leading: CGSize(width: 30, height: 14), trailing: CGSize(width: 40, height: 14))
+        for pose in [IslandPose.hidden, .compact, .docked, .expanded] {
+            let l = IslandGeometry.layout(pose: pose, metrics: notched, configuration: config, compactSlotSizes: size, expandedContentSize: CGSize(width: 260, height: 64))
+            #expect(l.rect.height >= 38, "\(pose)")
+        }
     }
 
-    @Test func compactAndExpandedPassThroughTheNotch() async {
+    @Test func theExpandedIslandRisesToTheNotchAndNarrowsIntoIt() async {
+        let i = island(notched)
+        let opening = poses(of: i)
+        await i.show(expanded: { Text("A") })
+        await Task.yield()
+        #expect(i.state == .expanded && i.model.pose == .expanded)
+        // Out of the notch: widen at the notch's height, then drop.
+        #expect(opening() == [.docked, .expanded])
+        let closing = poses(of: i)
+        await i.hide()
+        #expect(i.state == .hidden && i.model.pose == .hidden)
+        // Into the notch: rise to the notch's height, then narrow.
+        #expect(closing() == [.docked, .hidden])
+    }
+
+    @Test func compactAndExpandedMeetAtTheNotchsHeight() async {
         let i = island(notched)
         await i.show(compactLeading: { Text("L") }, trailing: { Text("T") })
         let seen = poses(of: i)
         await i.show(expanded: { Text("Big") })
         await Task.yield()
         #expect(i.state == .expanded && i.model.pose == .expanded)
-        #expect(seen() == [.hidden, .tucked, .expanded])
+        #expect(seen() == [.docked, .expanded])
 
         let back = poses(of: i)
         await i.show(compactLeading: { Text("L") }, trailing: { Text("T") })
         await Task.yield()
         #expect(i.model.pose == .compact)
-        #expect(back() == [.tucked, .hidden, .compact])
+        #expect(back() == [.docked, .compact])
+    }
+
+    @Test func aShowInterruptingTheNarrowingGoesStraightBackUp() async {
+        let i = island(notched)
+        await i.show(expanded: { Text("A") })
+        i.configuration.animationDuration = .seconds(1)
+        let hiding = Task { await i.hide() }
+        while i.model.pose != .docked { await Task.yield() }
+        i.configuration.animationDuration = .milliseconds(20)
+        let seen = poses(of: i)
+        await i.show(expanded: { Text("B") })
+        await hiding.value
+        #expect(i.state == .expanded && i.model.pose == .expanded)
+        #expect(seen() == [.expanded])
     }
 
     @Test func theStateChangesTheMomentAShowIsCalled() async {

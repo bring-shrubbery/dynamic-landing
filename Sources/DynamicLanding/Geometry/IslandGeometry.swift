@@ -21,9 +21,10 @@ public struct IslandLayout: Equatable, Sendable {
     public var look: IslandLook
     /// How far the island's drawing is shifted up behind the screen's top edge: the island is
     /// drawn `rect.height + slide` tall and only its lowest `rect.height` points show. Non-zero
-    /// only while the expanded island is in or out of the notch (the tucked pose), so it slides
-    /// straight up and down at its own width; its shape never re-fits a smaller height, which
-    /// widened the body as the flared top corners flattened.
+    /// only in the docked pose, where the expanded island has risen until just a notch's height
+    /// of it shows: between expanded and docked it slides straight up and down at its own width
+    /// and its shape never re-fits a smaller height, which widened the body as the flared top
+    /// corners flattened. The compact slots sit `slide` down the drawing, in the shown band.
     public var slide: CGFloat = 0
 }
 
@@ -104,10 +105,13 @@ public enum IslandGeometry {
         case .expanded:
             width = expandedWidth
             height = expandedHeight
-        case .tucked:
+        case .docked:
             width = expandedWidth
-            height = 0
+            height = compactHeight
         }
+        // Docked, the island is drawn at its expanded height and shifted up until only the
+        // lowest notch's height of it shows.
+        let slide: CGFloat = pose == .docked ? max(0, expandedHeight - compactHeight) : 0
 
         // The compact slots, beside the notch (or at the pill's ends), where they sit in the
         // compact island, in every pose: the same size and the same place on screen, so a
@@ -120,14 +124,14 @@ public enum IslandGeometry {
             let lw = max(0, min(slotWidths.leading, notchMinX - 2 * padding - radii.top))
             let trailingX = notchMaxX + padding
             let tw = max(0, min(slotWidths.trailing, compactWidth - radii.top - padding - trailingX))
-            leading = CGRect(x: notchMinX - padding - lw, y: 0, width: lw, height: compactHeight)
-            trailing = CGRect(x: trailingX, y: 0, width: tw, height: compactHeight)
+            leading = CGRect(x: notchMinX - padding - lw, y: slide, width: lw, height: compactHeight)
+            trailing = CGRect(x: trailingX, y: slide, width: tw, height: compactHeight)
         } else {
             let room = max(0, compactWidth - 3 * padding)
             let tw = min(slotWidths.trailing, max(room / 2, room - slotWidths.leading))
             let lw = min(slotWidths.leading, room - tw)
-            leading = CGRect(x: padding, y: 0, width: lw, height: compactHeight)
-            trailing = CGRect(x: compactWidth - padding - tw, y: 0, width: tw, height: compactHeight)
+            leading = CGRect(x: padding, y: slide, width: lw, height: compactHeight)
+            trailing = CGRect(x: compactWidth - padding - tw, y: slide, width: tw, height: compactHeight)
         }
         // From the compact island's coordinates to this one's, which share a centre.
         let shift = (width - compactWidth) / 2
@@ -144,7 +148,7 @@ public enum IslandGeometry {
         let rect = CGRect(x: frame.midX - width / 2, y: frame.maxY - height, width: width, height: height)
         return IslandLayout(rect: rect, topCornerRadius: radii.top, bottomCornerRadius: radii.bottom,
                             leadingSlot: leading, trailingSlot: trailing, contentRect: content, look: look,
-                            slide: pose == .tucked ? expandedHeight : 0)
+                            slide: slide)
     }
 
     private static func cornerRadii(for look: IslandLook, style: IslandStyle, configuration: IslandConfiguration) -> (top: CGFloat, bottom: CGFloat) {

@@ -161,9 +161,7 @@ public final class DynamicLanding {
                 guard generation == mine else { return }
                 applyHidden()
             }
-            try? await Task.sleep(for: duration)
-            // A later call owns the island now; leave its panel and content alone.
-            guard generation == mine, model.state == .hidden else { return }
+            guard await settleHidden(mine, duration: duration) else { return }
             controller?.dismiss()
             model.clearContent()
         }
@@ -172,23 +170,28 @@ public final class DynamicLanding {
     }
 
     private func applyHidden() {
-        // On a notched screen the expanded island retracts straight up, at its own width.
-        let retracts = model.stagesThroughNotch && model.pose == .expanded
+        // On a notched screen the expanded island first rises, at its own width, until only a
+        // notch's height of it shows; `settleHidden` then narrows that band into the notch. Any
+        // other shape is already at the notch's height and narrows into it at once.
+        let rises = model.stagesThroughNotch && model.pose == .expanded
         withAnimation(model.configuration.animation) {
-            model.setState(.hidden, pose: retracts ? .tucked : .hidden)
+            model.setState(.hidden, pose: rises ? .docked : .hidden)
         }
         controller?.refreshMousePassThrough()
     }
 
-    /// Draws the island in `pose` at once (with `state`, when given), so the animated step
-    /// that follows starts from it.
-    private func snap(_ pose: IslandPose, state: IslandState? = nil) {
-        var instant = Transaction()
-        instant.disablesAnimations = true
-        withTransaction(instant) {
-            if let state { model.setState(state, pose: pose) } else { model.setPose(pose) }
+    /// Waits for a hide's animation and, when the island rose to the notch's level first,
+    /// runs its second stage: narrowing into the notch. False when a later call has taken the
+    /// island over, in which case its panel and content are left alone.
+    private func settleHidden(_ mine: Int, duration: Duration) async -> Bool {
+        try? await Task.sleep(for: duration)
+        guard generation == mine, model.state == .hidden else { return false }
+        if model.pose == .docked {
+            animate { model.setPose(.hidden) }
+            try? await Task.sleep(for: duration)
+            guard generation == mine, model.state == .hidden else { return false }
         }
-        controller?.measureContent()
+        return true
     }
 
     private func animate(_ change: () -> Void) {
@@ -223,8 +226,8 @@ public final class DynamicLanding {
             applyHidden()
             let duration = animationDuration
             Task { @MainActor [weak self] in
-                try? await Task.sleep(for: duration)
-                guard let self, self.generation == mine, self.model.state == .hidden else { return }
+                guard let self else { return }
+                guard await self.settleHidden(mine, duration: duration) else { return }
                 self.controller?.dismiss()
             }
         }
@@ -257,24 +260,21 @@ public final class DynamicLanding {
             try? await Task.sleep(for: animationDuration)
             return
         }
-        // On a notched screen the notch stays put and the island goes in and out of it: the
-        // expanded island only ever changes height (from and to `.tucked`), and compact and
-        // expanded pass through the notch on their way to each other.
+        // On a notched screen the notch stays put and the island changes one dimension at a
+        // time: at the notch's height it only changes width, above it only height. Every way to
+        // or from the expanded shape passes through `.docked`, as wide as the expanded island
+        // and as tall as the notch: the notch or the compact island widens into it and it drops
+        // down, or the expanded island rises to it and it narrows. So nothing wider than the
+        // notch ever shows at less than the notch's height.
         switch (from, state) {
-        case (.compact, .expanded), (.expanded, .compact):
-            animate { model.setState(state, pose: from == .compact ? .hidden : .tucked) }
+        case (.hidden, .expanded), (.compact, .expanded), (.expanded, .compact):
+            animate { model.setState(state, pose: .docked) }
             controller?.refreshMousePassThrough()
             try? await Task.sleep(for: animationDuration)
             guard generation == mine else { return }
-            snap(state == .expanded ? .tucked : .hidden)
             animate { model.setPose(IslandPose(state)) }
-        case (.hidden, .expanded), (.tucked, .expanded):
-            snap(.tucked, state: state)
-            animate { model.setPose(.expanded) }
-        case (.tucked, .compact):
-            snap(.hidden, state: state)
-            animate { model.setPose(.compact) }
         default:
+            // The same shape, or from docked (a show interrupting a staged change): one morph.
             animate { model.setState(state) }
         }
         controller?.refreshMousePassThrough()
