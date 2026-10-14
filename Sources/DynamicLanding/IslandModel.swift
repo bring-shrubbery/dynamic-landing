@@ -8,7 +8,11 @@ public final class IslandModel {
     public private(set) var state: IslandState = .hidden
     /// The shape drawn now; the state's own, except during a staged change on a notched screen.
     private(set) var pose: IslandPose = .hidden {
-        didSet { if pose != oldValue { onPoseChange?(pose) } }
+        didSet {
+            guard pose != oldValue else { return }
+            islandLog.info("pose \(String(describing: self.pose), privacy: .public) for state \(String(describing: self.state), privacy: .public)")
+            onPoseChange?(pose)
+        }
     }
     /// Every pose as it is set, for tests.
     @ObservationIgnored var onPoseChange: ((IslandPose) -> Void)?

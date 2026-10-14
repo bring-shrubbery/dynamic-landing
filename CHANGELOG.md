@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.9
+
+- Every change of the island's pose is logged under the subsystem `com.quassum.dynamic-landing`,
+  so a show or hide can be checked with `log show`: on a notched screen an expanded island
+  closes as `docked`, then `hidden`.
+- A rendering test draws the island view in each pose and measures the black: the docked band
+  is exactly the notch's height and as wide as the expanded island's body.
+
 ## 0.2.8
 
 - The expanded island no longer shows a band wider than the notch as it closes. It used to
