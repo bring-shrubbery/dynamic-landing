@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.10
+
+- The island's flared top corners stay at the screen's top edge for as long as any of the
+  island shows. While the expanded island rose into the notch the whole shape slid up, so the
+  flares went out of view at once and a straight-sided band was left; now the shape is drawn at
+  its shown height and only the content slides up behind the top edge.
+- Hidden on a screen with a notch, the island takes the notch's own corner radii
+  (`physicalNotchCornerRadii`, 4 pt at the top and 8 pt at the bottom by default), so as it
+  narrows into the notch its corners morph from the island's into the housing's and there is no
+  step the moment it vanishes. It starts from them on the way out too.
+
 ## 0.2.9
 
 - Every change of the island's pose is logged under the subsystem `com.quassum.dynamic-landing`,

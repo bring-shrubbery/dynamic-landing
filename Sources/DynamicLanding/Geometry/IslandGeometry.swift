@@ -19,12 +19,12 @@ public struct IslandLayout: Equatable, Sendable {
     public var trailingSlot: CGRect?
     public var contentRect: CGRect?
     public var look: IslandLook
-    /// How far the island's drawing is shifted up behind the screen's top edge: the island is
-    /// drawn `rect.height + slide` tall and only its lowest `rect.height` points show. Non-zero
-    /// only in the docked pose, where the expanded island has risen until just a notch's height
-    /// of it shows: between expanded and docked it slides straight up and down at its own width
-    /// and its shape never re-fits a smaller height, which widened the body as the flared top
-    /// corners flattened. The compact slots sit `slide` down the drawing, in the shown band.
+    /// How far the content is shifted up behind the screen's top edge: it is laid out for the
+    /// expanded island, `rect.height + slide` tall, and slides up with it. Non-zero only in the
+    /// docked pose, where the expanded island has risen until just a notch's height of it
+    /// shows. The shape itself is drawn at `rect` and never slides, so its flared top corners
+    /// stay at the screen's top edge for as long as any of the island shows. The compact slots
+    /// sit `slide` down the content, in the shown band.
     public var slide: CGFloat = 0
 }
 
@@ -54,7 +54,10 @@ public enum IslandGeometry {
         compactSlotSizes: (leading: CGSize, trailing: CGSize), expandedContentSize: CGSize
     ) -> IslandLayout {
         let look = resolvedLook(style: configuration.style, metrics: metrics)
-        let radii = cornerRadii(for: look, style: configuration.style, configuration: configuration)
+        // Hidden on a screen with a notch, the island is the notch and takes its corners.
+        let radii = pose == .hidden && look == .notch && metrics.hasNotch
+            ? configuration.physicalNotchCornerRadii
+            : cornerRadii(for: look, style: configuration.style, configuration: configuration)
         let padding = configuration.slotPadding
         let frame = metrics.frame
 

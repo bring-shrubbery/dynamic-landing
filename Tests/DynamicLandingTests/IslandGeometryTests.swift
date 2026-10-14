@@ -124,6 +124,23 @@ struct IslandGeometryTests {
         }
     }
 
+    @Test func hiddenOnARealNotchTakesTheNotchsOwnCorners() {
+        var c = IslandConfiguration()
+        c.physicalNotchCornerRadii = (top: 4, bottom: 8)
+        let hidden = IslandGeometry.layout(state: .hidden, metrics: notched, configuration: c, compactSlotSizes: slots, expandedContentSize: content)
+        #expect(hidden.topCornerRadius == 4 && hidden.bottomCornerRadius == 8)
+        for state in [IslandState.compact, .expanded] {
+            let l = IslandGeometry.layout(state: state, metrics: notched, configuration: c, compactSlotSizes: slots, expandedContentSize: content)
+            #expect(l.topCornerRadius == 15 && l.bottomCornerRadius == 20, "\(state)")
+        }
+        // A virtual notch has no housing to match; a pill has no notch corners at all.
+        let virtual = IslandGeometry.layout(state: .hidden, metrics: notchless, configuration: c, compactSlotSizes: slots, expandedContentSize: content)
+        #expect(virtual.topCornerRadius == 0 && virtual.bottomCornerRadius == c.pillCornerRadius)
+        c.style = .notch(topCornerRadius: 12, bottomCornerRadius: 18)
+        let forced = IslandGeometry.layout(state: .hidden, metrics: notchless, configuration: c, compactSlotSizes: slots, expandedContentSize: content)
+        #expect(forced.topCornerRadius == 12 && forced.bottomCornerRadius == 18)
+    }
+
     @Test func hiddenOnANotchlessScreenIsZeroHeightWhateverTheStyle() {
         for style in styles {
             let l = layout(.hidden, notchless, style)

@@ -22,6 +22,11 @@ struct IslandRenderingTests {
     /// The bounding box of the opaque pixels, in points from the top-left, of the island drawn
     /// in a panel-sized canvas.
     private func opaqueBounds(pose: IslandPose) throws -> CGRect {
+        try opaque(pose: pose).bounds
+    }
+
+    /// The opaque width of each row of the island, top row first, and their bounding box.
+    private func opaque(pose: IslandPose) throws -> (bounds: CGRect, rowWidths: [Int]) {
         let canvas = CGSize(width: 300, height: 200)
         let renderer = ImageRenderer(content: IslandView(model: model(pose: pose)).frame(width: canvas.width, height: canvas.height, alignment: .top))
         renderer.scale = 1
@@ -32,12 +37,20 @@ struct IslandRenderingTests {
                                          space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
         ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
         var minX = w, maxX = -1, minY = h, maxY = -1
-        for y in 0..<h { for x in 0..<w where data[(y * w + x) * 4 + 3] > 128 {
-            minX = min(minX, x); maxX = max(maxX, x); minY = min(minY, y); maxY = max(maxY, y)
-        } }
-        guard maxX >= 0 else { return .zero }
+        var rows: [Int] = []
+        for y in 0..<h {
+            var rowMin = w, rowMax = -1
+            for x in 0..<w where data[(y * w + x) * 4 + 3] > 128 {
+                rowMin = min(rowMin, x); rowMax = max(rowMax, x)
+            }
+            if rowMax >= 0 {
+                rows.append(rowMax - rowMin + 1)
+                minX = min(minX, rowMin); maxX = max(maxX, rowMax); minY = min(minY, y); maxY = max(maxY, y)
+            }
+        }
+        guard maxX >= 0 else { return (.zero, []) }
         // The bitmap's first row is the top of the image.
-        return CGRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)
+        return (CGRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1), rows)
     }
 
     @Test func dockedDrawsABandAsWideAsTheExpandedIslandAndAsTallAsTheNotch() throws {
@@ -47,12 +60,22 @@ struct IslandRenderingTests {
         #expect(expanded.minY == 0 && expanded.height == 38 + 10 + 64 + 12)
         #expect(docked.minY == 0, "the band hangs from the top edge")
         #expect(docked.height == 38, "the band is exactly the notch's height, not shorter")
-        // The band is the expanded island's body: its flared top corners have slid out of view.
-        let body = model(pose: .expanded).layout.rect.width - 2 * 15
-        #expect(docked.width == body, "the band is as wide as the expanded island's body")
+        #expect(docked.width == expanded.width, "the band is as wide as the expanded island")
         #expect(docked.width > hidden.width, "wider than the notch, which the narrowing stage closes")
         #expect(hidden.height == 38 && hidden.width <= 200 && hidden.width >= 170)
         #expect(abs(docked.midX - hidden.midX) < 1 && abs(docked.midX - expanded.midX) < 1)
+    }
+
+    /// The flared top corners belong to the screen's top edge, not to the card: while the
+    /// island rises into the notch they stay where they are, so the band's top row is as wide
+    /// as the expanded island's and its body below the flares is narrower.
+    @Test func theFlaredTopCornersStayAtTheTopEdgeWhileTheIslandRises() throws {
+        let expanded = try opaque(pose: .expanded)
+        let docked = try opaque(pose: .docked)
+        #expect(docked.rowWidths.count == 38)
+        #expect(docked.rowWidths[0] == expanded.rowWidths[0], "the top row is the flares' full width")
+        #expect(docked.rowWidths[20] == expanded.rowWidths[20], "the body below the flares")
+        #expect(docked.rowWidths[0] > docked.rowWidths[20] + 10, "the flares widen the top rows")
     }
 }
 

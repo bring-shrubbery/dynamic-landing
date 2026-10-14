@@ -17,6 +17,12 @@ public struct IslandConfiguration: Sendable {
     /// Space above expanded content on a notchless screen (a notched screen uses the notch's height).
     public var expandedTopInset: CGFloat = 8
     public var notchCornerRadii: (top: CGFloat, bottom: CGFloat) = (top: 15, bottom: 20)
+    /// The corner radii of the Mac's own notch, which the hidden island takes on a screen that
+    /// has one: the island's corners morph into them as it narrows into the notch and out of
+    /// them as it comes out, so the moment it vanishes there is no step between its shape and
+    /// the housing. The housing's corners are much tighter than an island's, roughly 4 pt at
+    /// the top and 8 pt at the bottom.
+    public var physicalNotchCornerRadii: (top: CGFloat, bottom: CGFloat) = (top: 4, bottom: 8)
     public var pillCornerRadius: CGFloat = 16
     public var hoverBehavior: IslandHoverBehavior = []
     /// Padding inside a compact slot, and the gap between the two slots on a pill.
