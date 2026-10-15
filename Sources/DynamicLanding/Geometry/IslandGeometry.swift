@@ -5,7 +5,7 @@ import CoreGraphics
 public enum IslandLook: Equatable, Sendable {
     /// Flush with the notch: flared top corners, the body never narrower than the notch.
     case notch
-    /// A rounded pill hanging from the top edge.
+    /// A rounded pill hanging from the top edge, with small fillets where it meets the edge.
     case pill
 }
 
@@ -54,10 +54,18 @@ public enum IslandGeometry {
         compactSlotSizes: (leading: CGSize, trailing: CGSize), expandedContentSize: CGSize
     ) -> IslandLayout {
         let look = resolvedLook(style: configuration.style, metrics: metrics)
-        // Hidden on a screen with a notch, the island is the notch and takes its corners.
-        let radii = pose == .hidden && look == .notch && metrics.hasNotch
-            ? configuration.physicalNotchCornerRadii
-            : cornerRadii(for: look, style: configuration.style, configuration: configuration)
+        // The corners every shown pose has; sizes and slots are computed from these in every
+        // pose, so nothing moves when only the corners change.
+        let shownRadii = cornerRadii(for: look, style: configuration.style, configuration: configuration)
+        // Hidden on a screen with a notch, the island is the notch and takes its corners; a
+        // hidden pill has no fillets, so they grow in with it and shrink away with it.
+        let radii: (top: CGFloat, bottom: CGFloat) = if pose == .hidden && look == .notch && metrics.hasNotch {
+            configuration.physicalNotchCornerRadii
+        } else if pose == .hidden && look == .pill {
+            (0, shownRadii.bottom)
+        } else {
+            shownRadii
+        }
         let padding = configuration.slotPadding
         let frame = metrics.frame
 
@@ -78,18 +86,19 @@ public enum IslandGeometry {
         } else {
             metrics.notchSize.map { $0.height + p.top } ?? configuration.expandedTopInset
         }
+        // Both looks add their top corners' width: the flares on a notch, the fillets on a pill.
         let expandedWidth: CGFloat = if look == .notch, let n = notch {
-            min(max(n.width, expandedContentSize.width + p.leading + p.trailing) + 2 * radii.top, frame.width / 2)
+            min(max(n.width, expandedContentSize.width + p.leading + p.trailing) + 2 * shownRadii.top, frame.width / 2)
         } else {
-            min(max(expandedContentSize.width + p.leading + p.trailing, metrics.notchSize?.width ?? 0), frame.width / 2)
+            min(max(expandedContentSize.width + p.leading + p.trailing, metrics.notchSize?.width ?? 0) + 2 * shownRadii.top, frame.width / 2)
         }
         let expandedHeight = min(contentTop + expandedContentSize.height + p.bottom, frame.height / 2)
 
         // The compact island's width, whatever the pose: the slots are always laid out for it.
         let compactWidth: CGFloat = if let n = notch {
-            min(n.width + 2 * (radii.top + max(slotWidths.leading, slotWidths.trailing) + 2 * padding), frame.width / 2)
+            min(n.width + 2 * (shownRadii.top + max(slotWidths.leading, slotWidths.trailing) + 2 * padding), frame.width / 2)
         } else {
-            min(slotWidths.leading + slotWidths.trailing + 3 * padding, frame.width / 2)
+            min(slotWidths.leading + slotWidths.trailing + 3 * padding + 2 * shownRadii.top, frame.width / 2)
         }
 
         var width: CGFloat
@@ -124,17 +133,19 @@ public enum IslandGeometry {
         var trailing: CGRect
         if let n = notch {
             let notchMinX = max(0, (compactWidth - n.width) / 2), notchMaxX = min(compactWidth, notchMinX + n.width)
-            let lw = max(0, min(slotWidths.leading, notchMinX - 2 * padding - radii.top))
+            let lw = max(0, min(slotWidths.leading, notchMinX - 2 * padding - shownRadii.top))
             let trailingX = notchMaxX + padding
-            let tw = max(0, min(slotWidths.trailing, compactWidth - radii.top - padding - trailingX))
+            let tw = max(0, min(slotWidths.trailing, compactWidth - shownRadii.top - padding - trailingX))
             leading = CGRect(x: notchMinX - padding - lw, y: slide, width: lw, height: compactHeight)
             trailing = CGRect(x: trailingX, y: slide, width: tw, height: compactHeight)
         } else {
-            let room = max(0, compactWidth - 3 * padding)
+            // Inside the fillets, so a slot never sits under one.
+            let fillet = shownRadii.top
+            let room = max(0, compactWidth - 3 * padding - 2 * fillet)
             let tw = min(slotWidths.trailing, max(room / 2, room - slotWidths.leading))
             let lw = min(slotWidths.leading, room - tw)
-            leading = CGRect(x: padding, y: slide, width: lw, height: compactHeight)
-            trailing = CGRect(x: compactWidth - padding - tw, y: slide, width: tw, height: compactHeight)
+            leading = CGRect(x: fillet + padding, y: slide, width: lw, height: compactHeight)
+            trailing = CGRect(x: compactWidth - fillet - padding - tw, y: slide, width: tw, height: compactHeight)
         }
         // From the compact island's coordinates to this one's, which share a centre.
         let shift = (width - compactWidth) / 2
@@ -142,7 +153,7 @@ public enum IslandGeometry {
         trailing.origin.x += shift
 
         // The expanded content, centred in the island's current width at its expanded place.
-        let flares = look == .notch ? 2 * radii.top : 0
+        let flares = 2 * shownRadii.top
         let maxWidth = max(0, expandedWidth - flares - p.leading - p.trailing)
         let w = max(0, min(expandedContentSize.width, maxWidth))
         let h = max(0, min(expandedContentSize.height, expandedHeight - contentTop))
@@ -158,8 +169,8 @@ public enum IslandGeometry {
         switch (look, style) {
         case (.notch, .notch(let top, let bottom)): (top, bottom)
         case (.notch, _): configuration.notchCornerRadii
-        case (.pill, .pill(let radius)): (0, radius)
-        case (.pill, _): (0, configuration.pillCornerRadius)
+        case (.pill, .pill(let radius)): (configuration.pillTopCornerRadius, radius)
+        case (.pill, _): (configuration.pillTopCornerRadius, configuration.pillCornerRadius)
         }
     }
 }

@@ -23,6 +23,20 @@ struct IslandShapeTests {
         let path = IslandShape(look: .pill, topCornerRadius: 0, bottomCornerRadius: 16).path(in: rect)
         #expect(path.contains(CGPoint(x: 0.5, y: 0.5)) && path.contains(CGPoint(x: 199.5, y: 0.5)))
         #expect(!path.contains(CGPoint(x: 1, y: 59)) && path.contains(CGPoint(x: 100, y: 59)))
+        #expect(path.contains(CGPoint(x: 1, y: 30)) && path.contains(CGPoint(x: 199, y: 30)))
+    }
+
+    @Test func thePillsFilletsRoundTheJoinWithTheTopEdge() {
+        let rect = CGRect(x: 0, y: 0, width: 200, height: 60)
+        let path = IslandShape(look: .pill, topCornerRadius: 6, bottomCornerRadius: 16).path(in: rect)
+        // The top row spans the full width, meeting the edge; the body below the fillets is
+        // narrower by a fillet on each side, and the fillet's own corner is outside the shape.
+        #expect(path.contains(CGPoint(x: 2, y: 0.5)) && path.contains(CGPoint(x: 198, y: 0.5)))
+        #expect(!path.contains(CGPoint(x: 1, y: 5)) && path.contains(CGPoint(x: 7, y: 5)))
+        #expect(!path.contains(CGPoint(x: 3, y: 30)) && path.contains(CGPoint(x: 7, y: 30)) && !path.contains(CGPoint(x: 197, y: 30)))
+        #expect(!path.contains(CGPoint(x: 7, y: 59.5)) && path.contains(CGPoint(x: 100, y: 59)))
+        let bounds = path.boundingRect
+        #expect(abs(bounds.width - 200) < 0.01 && abs(bounds.height - 60) < 0.01)
     }
 
     @MainActor @Test func theModelLaysOutFromItsInputs() {

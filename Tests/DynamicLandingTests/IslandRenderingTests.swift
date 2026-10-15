@@ -8,9 +8,10 @@ import Testing
 @MainActor
 struct IslandRenderingTests {
     private let notched = ScreenMetrics(frame: CGRect(x: 0, y: 0, width: 600, height: 400), notchSize: CGSize(width: 200, height: 38), menuBarHeight: 38)
+    private let notchless = ScreenMetrics(frame: CGRect(x: 0, y: 0, width: 600, height: 400), notchSize: nil, menuBarHeight: 24)
 
-    private func model(pose: IslandPose) -> IslandModel {
-        let m = IslandModel(configuration: IslandConfiguration(), metrics: notched)
+    private func model(pose: IslandPose, metrics: ScreenMetrics? = nil) -> IslandModel {
+        let m = IslandModel(configuration: IslandConfiguration(), metrics: metrics ?? notched)
         m.setExpanded(AnyView(Color.clear.frame(width: 260, height: 64)))
         m.setCompact(leading: AnyView(Color.clear.frame(width: 30, height: 14)), trailing: AnyView(Color.clear.frame(width: 40, height: 14)))
         m.contentSize = CGSize(width: 260, height: 64)
@@ -26,9 +27,9 @@ struct IslandRenderingTests {
     }
 
     /// The opaque width of each row of the island, top row first, and their bounding box.
-    private func opaque(pose: IslandPose) throws -> (bounds: CGRect, rowWidths: [Int]) {
-        let canvas = CGSize(width: 300, height: 200)
-        let renderer = ImageRenderer(content: IslandView(model: model(pose: pose)).frame(width: canvas.width, height: canvas.height, alignment: .top))
+    private func opaque(pose: IslandPose, metrics: ScreenMetrics? = nil) throws -> (bounds: CGRect, rowWidths: [Int]) {
+        let canvas = CGSize(width: 400, height: 200)
+        let renderer = ImageRenderer(content: IslandView(model: model(pose: pose, metrics: metrics)).frame(width: canvas.width, height: canvas.height, alignment: .top))
         renderer.scale = 1
         let image = try #require(renderer.cgImage)
         let w = image.width, h = image.height
@@ -76,6 +77,23 @@ struct IslandRenderingTests {
         #expect(docked.rowWidths[0] == expanded.rowWidths[0], "the top row is the flares' full width")
         #expect(docked.rowWidths[20] == expanded.rowWidths[20], "the body below the flares")
         #expect(docked.rowWidths[0] > docked.rowWidths[20] + 10, "the flares widen the top rows")
+    }
+
+    /// On a screen without a notch the pill meets the top edge through small fillets: its top
+    /// rows widen towards the edge and the body below the fillets is a fillet (6 pt) narrower
+    /// on each side. The fillet leaves the edge tangentially, so its outermost pixels are too
+    /// faint to count as opaque and the top row measures a few points short of the full width.
+    /// The hidden pill is not measured: it is zero-sized, and `ImageRenderer` hands back its
+    /// previous image for a view that draws nothing at all. The geometry tests cover it.
+    @Test func thePillsTopCornersAreFilletedWhereItMeetsTheEdge() throws {
+        for pose in [IslandPose.compact, .expanded] {
+            let pill = try opaque(pose: pose, metrics: notchless)
+            let rows = pill.rowWidths
+            #expect(pill.bounds.minY == 0, "\(pose) hangs from the top edge")
+            #expect(rows[0] >= rows[10] + 4 && rows[0] <= rows[10] + 12, "\(pose): the top row is wider by up to a fillet a side: \(rows.prefix(8))")
+            #expect(rows[0] > rows[1] && rows[1] > rows[2], "\(pose): the fillets curve inward: \(rows.prefix(8))")
+            #expect(rows[6] == rows[10], "\(pose): straight sides below the fillets: \(rows.prefix(12))")
+        }
     }
 }
 

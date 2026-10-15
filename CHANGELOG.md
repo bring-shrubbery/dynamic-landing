@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.11
+
+- On a screen without a notch the pill meets the screen's top edge through small fillets:
+  its top corners flare outward by `pillTopCornerRadius` (6 pt by default), so the join
+  between the edge and the pill's sides is a curve rather than a right angle. The pill keeps
+  its content and slots inside the fillets. The hidden pill has none, so they grow in as the
+  pill appears and shrink away as it goes, with the island's own animation. Zero gives the
+  flat-topped pill of before.
+
 ## 0.2.10
 
 - The island's flared top corners stay at the screen's top edge for as long as any of the

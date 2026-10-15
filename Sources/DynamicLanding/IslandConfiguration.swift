@@ -24,6 +24,11 @@ public struct IslandConfiguration: Sendable {
     /// the top and 8 pt at the bottom.
     public var physicalNotchCornerRadii: (top: CGFloat, bottom: CGFloat) = (top: 4, bottom: 8)
     public var pillCornerRadius: CGFloat = 16
+    /// The small fillets where a pill meets the screen's top edge: the pill's top corners
+    /// flare outward by this much, so the join between the edge and the pill's sides is a
+    /// curve rather than a right angle. They grow in as the pill appears and shrink away as
+    /// it goes (the hidden pose has none). Zero draws the plain flat-topped pill.
+    public var pillTopCornerRadius: CGFloat = 6
     public var hoverBehavior: IslandHoverBehavior = []
     /// Padding inside a compact slot, and the gap between the two slots on a pill.
     public var slotPadding: CGFloat = 8

@@ -2,7 +2,9 @@
 import SwiftUI
 
 /// The island's silhouette. Notch look: the top corners flare outward so the shape meets the
-/// menu bar like the real notch; pill look: flat on top, rounded below.
+/// menu bar like the real notch; pill look: rounded below, and flat on top but for small
+/// fillets (`topCornerRadius`) that round the join between the screen's edge and its sides.
+/// Both are the one construction; a top radius of zero is a plain flat top.
 public struct IslandShape: Shape {
     public var look: IslandLook
     public var topCornerRadius: CGFloat
@@ -21,10 +23,10 @@ public struct IslandShape: Shape {
 
     public func path(in rect: CGRect) -> Path {
         switch look {
-        case .pill:
+        case .pill where topCornerRadius <= 0:
             return Path(roundedRect: rect, cornerRadii: RectangleCornerRadii(
                 topLeading: 0, bottomLeading: bottomCornerRadius, bottomTrailing: bottomCornerRadius, topTrailing: 0))
-        case .notch:
+        case .pill, .notch:
             let top = min(topCornerRadius, rect.width / 4, rect.height / 2)
             let bottom = min(bottomCornerRadius, (rect.width - 2 * top) / 2, max(0, rect.height - top))
             var p = Path()

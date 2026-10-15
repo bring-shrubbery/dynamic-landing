@@ -65,7 +65,28 @@ struct IslandGeometryTests {
         #expect(layout(.compact, notchless, .pill(cornerRadius: 16)).rect.height == 32)
         let leading = try #require(l.leadingSlot), trailing = try #require(l.trailingSlot)
         #expect(trailing.minX - leading.maxX == 8)
-        #expect(l.rect.width == CGFloat(24 + 40 + 3 * 8))
+        // The slots, their padding, and the two fillets at the top edge.
+        let width: CGFloat = 24 + 40 + 3 * 8 + 2 * 6
+        #expect(l.rect.width == width)
+        let inset: CGFloat = 6 + 8
+        #expect(leading.minX == inset)
+        #expect(trailing.maxX == width - inset)
+        #expect(l.topCornerRadius == 6)
+    }
+
+    @Test func aPillsFilletsAreGoneWhenHiddenSoTheyAnimateInAndOut() throws {
+        let hidden = layout(.hidden, notchless, .automatic)
+        #expect(hidden.topCornerRadius == 0 && hidden.bottomCornerRadius == 16)
+        // The slots stay put about the centre: the fillets' room is kept while they are gone.
+        let compact = layout(.compact, notchless, .automatic)
+        let hiddenLeading = try #require(hidden.leadingSlot), compactLeading = try #require(compact.leadingSlot)
+        #expect(abs((hiddenLeading.midX - hidden.rect.width / 2) - (compactLeading.midX - compact.rect.width / 2)) < 0.01)
+        #expect(hiddenLeading.size == compactLeading.size)
+        var c = IslandConfiguration(); c.pillTopCornerRadius = 0
+        let flat = IslandGeometry.layout(state: .compact, metrics: notchless, configuration: c, compactSlotSizes: slots, expandedContentSize: content)
+        let flatWidth: CGFloat = 24 + 40 + 3 * 8
+        #expect(flat.topCornerRadius == 0)
+        #expect(flat.rect.width == flatWidth)
     }
 
     @Test func expandedWrapsTheContentBelowTheNotch() throws {
@@ -78,12 +99,14 @@ struct IslandGeometryTests {
         #expect(abs(rect.midX - l.rect.width / 2) < 0.5)
     }
 
-    @Test func expandedOnAPillHangsFromTheTopEdge() {
+    @Test func expandedOnAPillHangsFromTheTopEdge() throws {
         let l = layout(.expanded, notchless, .automatic)
         #expect(l.contentRect?.minY == 8)
         #expect(l.rect.height == CGFloat(8 + 64 + 12))
-        #expect(l.rect.width == CGFloat(260 + 32))
-        #expect(l.topCornerRadius == 0 && l.bottomCornerRadius == 16)
+        #expect(l.rect.width == CGFloat(260 + 32 + 2 * 6))   // content, padding, and the two fillets
+        #expect(l.topCornerRadius == 6 && l.bottomCornerRadius == 16)
+        let rect = try #require(l.contentRect)
+        #expect(abs(rect.midX - l.rect.width / 2) < 0.5)
     }
 
     @Test func aForcedNotchOnANotchlessScreenUsesAVirtualNotch() {
@@ -133,7 +156,7 @@ struct IslandGeometryTests {
             let l = IslandGeometry.layout(state: state, metrics: notched, configuration: c, compactSlotSizes: slots, expandedContentSize: content)
             #expect(l.topCornerRadius == 15 && l.bottomCornerRadius == 20, "\(state)")
         }
-        // A virtual notch has no housing to match; a pill has no notch corners at all.
+        // A virtual notch has no housing to match; a hidden pill has no fillets.
         let virtual = IslandGeometry.layout(state: .hidden, metrics: notchless, configuration: c, compactSlotSizes: slots, expandedContentSize: content)
         #expect(virtual.topCornerRadius == 0 && virtual.bottomCornerRadius == c.pillCornerRadius)
         c.style = .notch(topCornerRadius: 12, bottomCornerRadius: 18)
@@ -177,15 +200,16 @@ struct IslandGeometryTests {
 
     @Test func aForcedPillOnANotchedScreenPutsTheSlotsBesideTheNotch() throws {
         let l = layout(.compact, notched, .pill(cornerRadius: 14))
-        #expect(l.topCornerRadius == 0 && l.bottomCornerRadius == 14)
+        #expect(l.topCornerRadius == 6 && l.bottomCornerRadius == 14)
         #expect(l.rect.height == 38)
         try expectSlotsInsideIslandAndOutsideNotch(l, notchWidth: 200)
         let leading = try #require(l.leadingSlot), trailing = try #require(l.trailingSlot)
         let band = notchBand(l, 200)
         #expect(leading.maxX == band.lowerBound - 8 && trailing.minX == band.upperBound + 8)
         #expect(leading.width == slots.leading.width && trailing.width == slots.trailing.width)
-        #expect(l.rect.width == CGFloat(200 + 2 * (40 + 16)))   // no flares; padding on both sides of each slot
-        #expect(trailing.maxX <= l.rect.width - 8 && leading.minX >= 8)
+        let width: CGFloat = 200 + 2 * (6 + 40 + 16)   // the fillets, and padding on both sides of each slot
+        #expect(l.rect.width == width)
+        #expect(trailing.maxX <= width - 6 - 8 && leading.minX >= 6 + 8)
     }
 
     @Test func aForcedPillOnANotchedScreenExpandsBelowTheNotch() throws {
@@ -228,7 +252,8 @@ struct IslandGeometryTests {
         #expect(l.rect.maxY == notchless.frame.maxY && abs(l.rect.midX - notchless.frame.midX) < 0.5)
         let rect = try #require(l.contentRect)
         #expect(island.contains(rect))
-        #expect(rect.width == l.rect.width - 32 && abs(rect.midX - l.rect.width / 2) < 0.5)
+        #expect(rect.width == l.rect.width - CGFloat(2 * 6 + 32))
+        #expect(abs(rect.midX - l.rect.width / 2) < 0.5)
 
         let n = layout(.expanded, notched, .automatic, content: CGSize(width: 5000, height: 5000))
         let notchRect = try #require(n.contentRect)
